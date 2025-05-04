@@ -17,4 +17,11 @@ bool loadCamera();
  */
 camera_fb_t *takePhoto();
 
+/**
+ * Takes a photo from the camera sensor and calls the callback function with the frame buffer (frees the allocated memory at the end).
+ *
+ * @param callback The callback function to be called with the frame buffer.
+ */
+void takeSafePhoto(void (*callback)(*camera_fb_t));
+
 #endif

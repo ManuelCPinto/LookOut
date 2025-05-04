@@ -29,6 +29,15 @@ typedef enum
 bool loadFingerprint();
 
 /**
+ * Finds a free ID for storing the fingerprint in the sensor.
+ *
+ * @param maxId The maximum ID to check for free space.
+ *              Default is the maximum capacity of the sensor.
+ * @return The ID if available, -1 if not.
+ */
+uint16_t findFreeId(uint16_t maxId);
+
+/**
  * Registers a new fingerprint to the sensor.
  *
  * @param callback A function to call whenever a new fingerprint stage occurs.
@@ -39,7 +48,7 @@ FingerprintError registerFingerprint(void (*callback)(FingerprintStage));
 /**
  * Scans the fingerprint and returns its ID if valid.
  *
- * @return The fingerprint ID if valid (1-64 for AS608).
+ * @return The fingerprint ID if valid (1-60 for AS608).
  */
 uint16_t scanFingerprint();
 
