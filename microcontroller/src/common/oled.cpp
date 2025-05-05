@@ -18,7 +18,16 @@ bool loadOLED() {
   return display.begin(SSD1306_SWITCHCAPVCC, I2C_ADDRESS);
 }
 
-void displayQRCode(char *msg) {
+void displayText(const char *text) {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.println(text);
+  display.display();
+}
+
+void displayQRCode(const char *msg) {
   display.clearDisplay();
 
   qrcode.setBackgroundColor(WHITE).setScale(2);
