@@ -48,7 +48,7 @@ bool loadCamera()
   config.jpeg_quality = 12;
   config.fb_count = 1;
 
-  return esp_camera_init(&config) != ESP_OK);
+  return esp_camera_init(&config) != ESP_OK;
 }
 
 camera_fb_t *takePhoto()
@@ -56,7 +56,7 @@ camera_fb_t *takePhoto()
   return esp_camera_fb_get();
 }
 
-void takeSafePhoto(void (*callback)(*camera_fb_t))
+void takeSafePhoto(void (*callback)(camera_fb_t*))
 {
   camera_fb_t *fb = esp_camera_fb_get();
 

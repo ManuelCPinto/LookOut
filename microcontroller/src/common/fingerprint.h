@@ -21,6 +21,8 @@ typedef enum
   FINGERPRINT_STORE_ERROR             // "Failed to store fingerprint."
 } FingerprintError;
 
+extern Adafruit_Fingerprint finger;
+
 /**
  * Loads the fingerprint sensor (REQUIRED AT THE START).
  *
@@ -48,7 +50,7 @@ FingerprintError registerFingerprint(void (*callback)(FingerprintStage));
 /**
  * Scans the fingerprint and returns its ID if valid.
  *
- * @return The fingerprint ID if valid (1-60 for AS608).
+ * @return The fingerprint ID if valid (1-64 for AS608).
  */
 uint16_t scanFingerprint();
 

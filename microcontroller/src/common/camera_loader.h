@@ -22,6 +22,6 @@ camera_fb_t *takePhoto();
  *
  * @param callback The callback function to be called with the frame buffer.
  */
-void takeSafePhoto(void (*callback)(*camera_fb_t));
+void takeSafePhoto(void (*callback)(camera_fb_t*));
 
 #endif
