@@ -5,10 +5,10 @@
 const int RX_PORT = 16;
 const int TX_PORT = 17;
 
-const HardwareSerial mySerial(1);
-const Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
+HardwareSerial mySerial(1);
+Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
 
-uint16_t current_free_id = 1; // For findFreeId(). Starts at 1.
+uint16_t current_free_id = 1; // Don't trust this value, it's only for findFreeId() (min value: 1).
 
 bool loadFingerprint()
 {
@@ -25,7 +25,6 @@ bool loadFingerprint()
   }
 }
 
-// Private function
 uint16_t findFreeId(uint16_t maxId = finger.capacity - 1)
 {
   if (finger.templateCount >= maxId)
@@ -40,10 +39,11 @@ uint16_t findFreeId(uint16_t maxId = finger.capacity - 1)
 
   for (uint16_t id = 0; id <= maxId; id++)
   {
-    const id2 = (((current_free_id - 1) + id) % maxId) + 1;
+    uint16_t id2 = (((current_free_id - 1) + id) % maxId) + 1; // Min: 1, Current: current_free_id + 1, Max: maxId
 
     if (finger.loadModel(id2) != FINGERPRINT_OK)
     {
+      current_free_id = id2 + 1;
       return id2;
     }
   }

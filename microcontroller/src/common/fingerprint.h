@@ -21,12 +21,23 @@ typedef enum
   FINGERPRINT_STORE_ERROR             // "Failed to store fingerprint."
 } FingerprintError;
 
+extern Adafruit_Fingerprint finger;
+
 /**
  * Loads the fingerprint sensor (REQUIRED AT THE START).
  *
  * @return Whether loaded successfully.
  */
 bool loadFingerprint();
+
+/**
+ * Finds a free ID for storing the fingerprint in the sensor.
+ *
+ * @param maxId The maximum ID to check for free space.
+ *              Default is the maximum capacity of the sensor.
+ * @return The ID if available, -1 if not.
+ */
+uint16_t findFreeId(uint16_t maxId);
 
 /**
  * Registers a new fingerprint to the sensor.

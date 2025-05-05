@@ -37,8 +37,8 @@ bool loadCamera()
   config.pin_pclk = PCLK_GPIO_NUM;
   config.pin_vsync = VSYNC_GPIO_NUM;
   config.pin_href = HREF_GPIO_NUM;
-  config.pin_sscb_sda = SIOD_GPIO_NUM;
-  config.pin_sscb_scl = SIOC_GPIO_NUM;
+  config.pin_sccb_sda = SIOD_GPIO_NUM;
+  config.pin_sccb_scl = SIOC_GPIO_NUM;
   config.pin_pwdn = PWDN_GPIO_NUM;
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
@@ -48,10 +48,21 @@ bool loadCamera()
   config.jpeg_quality = 12;
   config.fb_count = 1;
 
-  return esp_camera_init(&config) != ESP_OK);
+  return esp_camera_init(&config) != ESP_OK;
 }
 
 camera_fb_t *takePhoto()
 {
   return esp_camera_fb_get();
+}
+
+void takeSafePhoto(void (*callback)(camera_fb_t*))
+{
+  camera_fb_t *fb = esp_camera_fb_get();
+
+  if (fb)
+  {
+    callback(fb);
+    esp_camera_fb_return(fb);
+  }
 }
