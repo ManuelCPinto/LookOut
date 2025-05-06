@@ -56,7 +56,7 @@ camera_fb_t *takePhoto()
   return esp_camera_fb_get();
 }
 
-void takeSafePhoto(void (*callback)(camera_fb_t*))
+void takeSafePhoto(void (*callback)(camera_fb_t *fb))
 {
   camera_fb_t *fb = esp_camera_fb_get();
 

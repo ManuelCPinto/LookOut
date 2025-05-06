@@ -4,7 +4,7 @@
 WiFiClientSecure espClient;
 PubSubClient client(espClient);
 
-void loadMQTT(char *mqttServer, int mqttPort, void (*callback)(char *, uint8_t *, unsigned int))
+void loadMQTT(char *mqttServer, int mqttPort, void (*callback)(char *topic, uint8_t *payload, unsigned int length))
 {
   espClient.setInsecure();
   client.setServer(mqttServer, mqttPort);

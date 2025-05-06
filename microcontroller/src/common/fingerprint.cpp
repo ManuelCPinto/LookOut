@@ -51,7 +51,7 @@ uint16_t findFreeId(uint16_t maxId = finger.capacity - 1)
   return -1;
 }
 
-FingerprintError registerFingerprint(void (*callback)(FingerprintStage))
+FingerprintError registerFingerprint(void (*callback)(FingerprintStage stage))
 {
   int p = -1;
 
