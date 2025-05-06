@@ -17,11 +17,15 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.SCMU2425.lookout",
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+     "edgeToEdgeEnabled": true,
+     "config": {
+     "googleServicesFile": "./google-services.json"
+     }    
     },
     "web": {
       "bundler": "metro",
@@ -30,7 +34,15 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+          "config": { "googleServicesFile": "./google-services.json" }
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
