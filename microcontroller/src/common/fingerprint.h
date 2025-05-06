@@ -45,7 +45,7 @@ uint16_t findFreeId(uint16_t maxId);
  * @param callback A function to call whenever a new fingerprint stage occurs.
  * @return A fingerprint error if any.
  */
-FingerprintError registerFingerprint(void (*callback)(FingerprintStage));
+FingerprintError registerFingerprint(void (*callback)(FingerprintStage stage));
 
 /**
  * Scans the fingerprint and returns its ID if valid.

@@ -11,7 +11,8 @@ bool loadFirebase(const char *api_key, const char *database_url)
   config.api_key = api_key;
   config.database_url = database_url;
 
-  if (!Firebase.signUp(&config, &auth, "", "")) {
+  if (!Firebase.signUp(&config, &auth, "", ""))
+  {
     return false;
   }
 

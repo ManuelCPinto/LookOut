@@ -8,9 +8,9 @@
  *
  * @param mqttServer The MQTT server address.
  * @param mqttPort The MQTT server port.
- * @param callback A function to call whenever a new message arrives: char* topic, uint8_t* payload, unsigned int length
+ * @param callback A function to call whenever a new message arrives.
  */
-void loadMQTT(char *mqttServer, int mqttPort, void (*callback)(char *, uint8_t *, unsigned int));
+void loadMQTT(char *mqttServer, int mqttPort, void (*callback)(char *topic, uint8_t *payload, unsigned int length));
 
 /**
  * Loops the MQTT client (REQUIRED IN THE LOOP).

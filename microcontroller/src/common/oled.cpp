@@ -13,12 +13,14 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, RESET_PIN);
 QRCodeGFX qrcode(display);
 
-bool loadOLED() {
+bool loadOLED()
+{
   Wire.begin(SDA_PIN, SCL_PIN);
   return display.begin(SSD1306_SWITCHCAPVCC, I2C_ADDRESS);
 }
 
-void displayText(const char *text) {
+void displayText(const char *text)
+{
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SSD1306_WHITE);
@@ -27,7 +29,8 @@ void displayText(const char *text) {
   display.display();
 }
 
-void displayQRCode(const char *msg) {
+void displayQRCode(const char *msg)
+{
   display.clearDisplay();
 
   qrcode.setBackgroundColor(WHITE).setScale(2);
