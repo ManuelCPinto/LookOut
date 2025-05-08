@@ -48,9 +48,9 @@ export default function LoadingScreen() {
     const user = auth.currentUser;
     console.log(user)
     if (user && user.emailVerified) {
-      router.replace("/(auth)/login");
-    } else {
       router.replace("/(tabs)/home");
+    } else {
+      router.replace("/(auth)/login");
     }
   }
 
