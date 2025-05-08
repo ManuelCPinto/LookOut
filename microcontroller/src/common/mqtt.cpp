@@ -4,18 +4,18 @@
 WiFiClientSecure espClient;
 PubSubClient client(espClient);
 
-void loadMQTT(char *mqttServer, int mqttPort, void (*callback)(char *topic, uint8_t *payload, unsigned int length))
+void loadMQTT(const char *mqttServer, int mqttPort, void (*callback)(char *topic, uint8_t *payload, unsigned int length))
 {
   espClient.setInsecure();
   client.setServer(mqttServer, mqttPort);
   client.setCallback(callback);
 }
 
-void loopMQTT(char *mqttUser, char *mqttPass, char *mqttTopics[], int topicCount)
+void loopMQTT(const char *mqttUsername, const char *mqttPassword, const char *mqttTopics[], int topicCount)
 {
   while (!client.connected())
   {
-    if (client.connect("ESP32Client", mqttUser, mqttPass))
+    if (client.connect("ESP32Client", mqttUsername, mqttPassword))
     {
       for (int i = 0; i < topicCount; i++)
       {
