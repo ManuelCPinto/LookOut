@@ -12,4 +12,9 @@
  */
 IPAddress connectWifi(const char *ssid, const char *password);
 
+/**
+ * Configures the timestamp using NTP servers.
+ */
+void configTimestamp();
+
 #endif
