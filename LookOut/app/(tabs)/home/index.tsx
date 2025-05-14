@@ -34,11 +34,11 @@ export default function HomeScreen() {
       <ScrollView className="px-4 py-4">
 
         {/* Card 1: Welcome + Stats + Devices */}
-        <View className="bg-white rounded-2xl p-4 mb-4 shadow-lg">
-          <Text className="text-xl font-bold text-blue-900 mb-1">
+        <View className="p-4 mb-4 bg-white shadow-lg rounded-2xl">
+          <Text className="mb-1 text-xl font-bold text-blue-900">
             Welcome back 👋
           </Text>
-          <Text className="text-gray-500 mb-4">
+          <Text className="mb-4 text-gray-500">
             Monitor your spaces in real time with LookOut.
           </Text>
 
@@ -57,7 +57,7 @@ export default function HomeScreen() {
           </View>
 
           {/* Devices grid */}
-          <Text className="text-lg font-semibold text-blue-900 mb-2">
+          <Text className="mb-2 text-lg font-semibold text-blue-900">
             Your Devices
           </Text>
           <View className="flex-row flex-wrap justify-between mb-4">
@@ -80,26 +80,26 @@ export default function HomeScreen() {
 
           {/* View All Devices*/}
           <TouchableOpacity
-            className="self-center bg-blue-600 px-5 py-2 rounded-full"
+            className="self-center px-5 py-2 bg-blue-600 rounded-full"
             onPress={() => router.push("/devices")}
           >
-            <Text className="text-white font-semibold">
+            <Text className="font-semibold text-white">
               View All Devices
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* Card 2: Recent Alerts */}
-        <View className="bg-white rounded-2xl p-4 shadow-lg">
-          <Text className="text-lg font-semibold text-blue-900 mb-3">
+        <View className="p-4 bg-white shadow-lg rounded-2xl">
+          <Text className="mb-3 text-lg font-semibold text-blue-900">
             Recent Alerts
           </Text>
 
-          <View className="space-y-3 mb-4">
+          <View className="mb-4 space-y-3">
             {alerts.map((a, i) => (
               <View
                 key={i}
-                className="flex-row items-center bg-gray-50 p-3 rounded-lg border-l-4 border-yellow-300"
+                className="flex-row items-center p-3 border-l-4 border-yellow-300 rounded-lg bg-gray-50"
               >
                 <Ionicons
                   name={a.type === "doorbell" ? "notifications-outline" : "walk-outline"}
@@ -114,7 +114,7 @@ export default function HomeScreen() {
                       ? `Doorbell rang – ${a.cameraName}`
                       : `Motion detected – ${a.cameraName}`}
                   </Text>
-                  <Text className="text-xs text-gray-500 mt-1">
+                  <Text className="mt-1 text-xs text-gray-500">
                     {a.time}
                   </Text>
                 </View>
@@ -123,10 +123,10 @@ export default function HomeScreen() {
           </View>
 
           <TouchableOpacity
-            className="w-full bg-blue-600 py-3 rounded-full items-center"
-            onPress={() => router.push("/activity")}
+            className="items-center w-full py-3 bg-blue-600 rounded-full"
+            onPress={() => router.push("/logs")}
           >
-            <Text className="text-white font-semibold">
+            <Text className="font-semibold text-white">
               View All Alerts
             </Text>
           </TouchableOpacity>

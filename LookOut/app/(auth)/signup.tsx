@@ -1,4 +1,3 @@
-// app/(auth)/signup.tsx
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -10,143 +9,59 @@ import {
   Modal,
   Pressable,
   Animated,
-  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
-import {
-  createUserWithEmailAndPassword,
-  sendEmailVerification,
-  signOut,
-  User,
-} from "firebase/auth";
-import { auth, db } from "../../lib/firebase";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import logo from "../../assets/logo.png";
+import { useSignUp } from "@/hooks/auth";
 
 export default function SignUpPage() {
   const router = useRouter();
+  const [username, setUsername]   = useState("");
+  const [email, setEmail]         = useState("");
+  const [password, setPassword]   = useState("");
+  const [confirm, setConfirm]     = useState("");
+  const [showErrorModal, setShowErrorModal]     = useState(false);
+  const [showVerifyModal, setShowVerifyModal]   = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit]   = useState(false);
 
-  // form state
-  const [username, setUsername] = useState("");
-  const [email, setEmail]       = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm]   = useState("");
-  const [loading, setLoading]   = useState(false);
+  const {
+    pendingUser,
+    loading,
+    error,
+    signUp,
+    checkVerified,
+    resendVerification,
+  } = useSignUp();
 
-  // error & verify modals
-  const [errorMessage, setErrorMessage]       = useState<string | null>(null);
-  const [showErrorModal, setShowErrorModal]   = useState(false);
-  const [showVerifyModal, setShowVerifyModal] = useState(false);
-
-  // hold the auth user until verification
-  const [pendingUser, setPendingUser] = useState<User | null>(null);
-
-  // fade-in animation
   const fade = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(fade, {
-      toValue: 1, duration: 500, useNativeDriver: true
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
     }).start();
-  }, []);
+  }, [fade]);
 
-  // simple validation
   const canSubmit =
-    username.trim() !== "" &&
-    email.trim()     !== "" &&
-    password         !== "" &&
-    confirm          !== "";
+    username.trim() &&
+    email.trim() &&
+    password &&
+    confirm &&
+    password === confirm;
 
-  const inputStyle = "rounded-lg p-3 mb-4 border border-gray-300";
-
-  // STEP 1: create Auth user & send verification (but do NOT sign out yet)
   const handleSignUp = async () => {
+    setAttemptedSubmit(true);
     if (!canSubmit) {
-      setErrorMessage("All fields are required.");
-      return setShowErrorModal(true);
-    }
-    if (password !== confirm) {
-      setErrorMessage("Passwords do not match.");
-      return setShowErrorModal(true);
-    }
-    if (password.length < 6) {
-      setErrorMessage("Password must be at least 6 characters.");
-      return setShowErrorModal(true);
-    }
-
-    setLoading(true);
-    try {
-      const cred = await createUserWithEmailAndPassword(
-        auth,
-        email.trim(),
-        password
-      );
-
-      // send the verification link
-      await sendEmailVerification(cred.user as User);
-
-      // keep them signed in so reload() works
-      setPendingUser(cred.user as User);
-      setShowVerifyModal(true);
-
-    } catch (e: any) {
-      setErrorMessage(e.message);
       setShowErrorModal(true);
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
-
-  // STEP 2: user clicks “I’ve Confirmed”
-  const checkVerified = async () => {
-    if (!pendingUser) return;
-    setLoading(true);
-
-    try {
-      // reload the very same user instance
-      await pendingUser.reload();
-
-      if (pendingUser.emailVerified) {
-        // write Firestore doc
-        await setDoc(doc(db, "users", pendingUser.uid), {
-          username: username.trim(),
-          email:    pendingUser.email,
-          createdAt: serverTimestamp(),
-        });
-
-        // now you can sign them out if you want a fresh login
-        await signOut(auth);
-
-        // finally, enter the app
-        router.replace("/");
-      } else {
-        Alert.alert(
-          "Still Not Verified",
-          "We don't see your email as verified yet.\nPlease click the link in your inbox and then tap “I’ve Confirmed.”"
-        );
-      }
-    } catch (err: any) {
-      Alert.alert("Error", err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // STEP 3: resend if needed
-  const resendEmail = async () => {
-    if (!pendingUser) return;
-    setLoading(true);
-    try {
-      await sendEmailVerification(pendingUser);
-      Alert.alert("Email Sent", "A new verification link has been sent.");
-    } catch (e: any) {
-      Alert.alert("Error", e.message);
-    } finally {
-      setLoading(false);
-    }
+    const ok = await signUp(email.trim(), password);
+    if (ok) setShowVerifyModal(true);
+    else setShowErrorModal(true);
   };
 
   return (
-    <View className="flex-1 bg-gray-50 px-4 justify-center">
+    <View className="justify-center flex-1 px-4 bg-gray-50">
       {/* Logo */}
       <View className="items-center mb-6">
         <Image
@@ -156,23 +71,29 @@ export default function SignUpPage() {
         />
       </View>
 
-      {/* Sign-Up Form */}
+      {/* Form */}
       <Animated.View style={{ opacity: fade }}>
-        <View className="bg-white rounded-2xl p-6 shadow-lg">
-          <Text className="text-2xl font-bold text-blue-900 mb-6 text-center">
+        <View className="p-6 bg-white shadow-lg rounded-2xl">
+          <Text className="mb-6 text-2xl font-bold text-center text-blue-900">
             Create Account
           </Text>
 
+          {/** Username */}
           <TextInput
-            className={inputStyle}
+            className={`rounded-lg p-3 mb-4 border ${
+              attemptedSubmit && !username ? "border-red-500" : "border-gray-300"
+            }`}
             placeholder="Username"
             autoCapitalize="none"
             value={username}
             onChangeText={setUsername}
           />
 
+          {/** Email */}
           <TextInput
-            className={inputStyle}
+            className={`rounded-lg p-3 mb-4 border ${
+              attemptedSubmit && !email ? "border-red-500" : "border-gray-300"
+            }`}
             placeholder="Email"
             autoCapitalize="none"
             keyboardType="email-address"
@@ -180,42 +101,52 @@ export default function SignUpPage() {
             onChangeText={setEmail}
           />
 
+          {/** Password */}
           <TextInput
-            className={inputStyle}
+            className={`rounded-lg p-3 mb-4 border ${
+              attemptedSubmit && (!password || password !== confirm)
+                ? "border-red-500"
+                : "border-gray-300"
+            }`}
             placeholder="Password"
             secureTextEntry
             value={password}
             onChangeText={setPassword}
           />
 
+          {/** Confirm */}
           <TextInput
-            className={inputStyle}
+            className={`rounded-lg p-3 mb-6 border ${
+              attemptedSubmit && password !== confirm
+                ? "border-red-500"
+                : "border-gray-300"
+            }`}
             placeholder="Confirm Password"
             secureTextEntry
             value={confirm}
             onChangeText={setConfirm}
           />
 
+          {/* Submit */}
           <TouchableOpacity
             className={`py-3 rounded-lg items-center mb-4 ${
               canSubmit ? "bg-blue-600" : "bg-blue-300"
-            }`}
+            } ${loading ? "opacity-60" : ""}`}
             onPress={handleSignUp}
             disabled={!canSubmit || loading}
           >
             {loading ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text className="text-white font-semibold text-lg">
-                Sign Up
-              </Text>
+              <Text className="text-lg font-semibold text-white">Sign Up</Text>
             )}
           </TouchableOpacity>
 
+          {/* Back to Login */}
           <View className="flex-row justify-center">
             <Text className="text-gray-500">Already have an account? </Text>
             <TouchableOpacity onPress={() => router.replace("/login")}>
-              <Text className="text-blue-600 font-semibold">Log In</Text>
+              <Text className="font-semibold text-blue-600">Log In</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -228,65 +159,59 @@ export default function SignUpPage() {
         animationType="fade"
         onRequestClose={() => setShowErrorModal(false)}
       >
-        <View className="flex-1 bg-black bg-opacity-50 justify-center items-center px-4">
-          <View className="bg-white rounded-xl p-6 w-full max-w-sm shadow-lg">
-            <Text className="text-xl font-bold text-red-600 mb-4">
+        <View className="items-center justify-center flex-1 bg-black bg-opacity-50">
+          <View className="w-full max-w-sm p-6 bg-white shadow-lg rounded-xl">
+            <Text className="mb-4 text-xl font-bold text-red-600">
               Sign Up Error
             </Text>
-            <Text className="text-gray-700 mb-6">{errorMessage}</Text>
+            <Text className="mb-6 text-gray-700">{error || "Invalid input."}</Text>
             <Pressable
-              className="bg-red-600 py-2 rounded-lg items-center"
+              className="items-center py-2 bg-red-600 rounded-lg"
               onPress={() => setShowErrorModal(false)}
             >
-              <Text className="text-white font-semibold">Dismiss</Text>
+              <Text className="font-semibold text-white">Dismiss</Text>
             </Pressable>
           </View>
         </View>
       </Modal>
 
-      {/* Verify-Email Modal */}
+      {/* Verify Email Modal */}
       <Modal
         visible={showVerifyModal}
         transparent
         animationType="fade"
         onRequestClose={() => {}}
       >
-        <View className="flex-1 bg-black bg-opacity-50 justify-center items-center px-4">
-          <View className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-lg">
-            <Text className="text-2xl font-bold text-green-700 mb-4 text-center">
+        <View className="items-center justify-center flex-1 px-4 bg-black bg-opacity-50">
+          <View className="w-full max-w-sm p-6 bg-white shadow-lg rounded-2xl">
+            <Text className="mb-4 text-2xl font-bold text-center text-green-700">
               Just One More Step!
             </Text>
-            <Text className="text-gray-700 mb-6 text-center">
-              We’ve sent a verification link to{`\n`}
+            <Text className="mb-6 text-center text-gray-700">
+              We’ve sent a verification link to{"\n"}
               <Text className="font-semibold">{email}</Text>
             </Text>
-
             <Pressable
-              className="bg-blue-600 py-3 rounded-lg mb-3 items-center"
-              onPress={checkVerified}
+              className="items-center py-3 mb-3 bg-blue-600 rounded-lg"
+              onPress={() => checkVerified(username, email)}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
-                <Text className="text-white font-semibold">I’ve Confirmed</Text>
+                <Text className="font-semibold text-white">I’ve Confirmed</Text>
               )}
             </Pressable>
-
             <Pressable
-              className="bg-gray-200 py-3 rounded-lg mb-3 items-center"
-              onPress={resendEmail}
+              className="items-center py-3 mb-3 bg-gray-200 rounded-lg"
+              onPress={resendVerification}
               disabled={loading}
             >
-              <Text className="text-gray-800 font-medium">Resend Email</Text>
+              <Text className="font-medium text-gray-800">Resend Email</Text>
             </Pressable>
-
             <Pressable
-              className="items-center mt-2"
-              onPress={() => {
-                setShowVerifyModal(false);
-                router.replace("/login");
-              }}
+              className="items-center"
+              onPress={() => router.replace("/login")}
             >
               <Text className="text-blue-600">Back to Log In</Text>
             </Pressable>
