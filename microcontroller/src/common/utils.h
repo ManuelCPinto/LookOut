@@ -9,12 +9,4 @@
  */
 const char *hashMD5(const char *input);
 
-/**
- * Generates a unique ID from the MAC address.
- *
- * @param macAddress The MAC address to convert.
- * @return The unique ID as a string.
- */
-const char *makeMACAsUniqueId(const uint8_t *macAddress);
-
 #endif

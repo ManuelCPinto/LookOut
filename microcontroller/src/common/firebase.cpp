@@ -6,10 +6,10 @@
 FirebaseAuth auth;
 FirebaseConfig config;
 
-bool loadFirebase(const char *api_key, const char *database_url)
+bool loadFirebase(const char *apiKey, const char *databaseURL)
 {
-  config.api_key = api_key;
-  config.database_url = database_url;
+  config.api_key = apiKey;
+  config.database_url = databaseURL;
 
   if (!Firebase.signUp(&config, &auth, "", ""))
   {

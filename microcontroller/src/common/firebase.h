@@ -9,8 +9,10 @@ extern FirebaseConfig config;
 /**
  * Loads Firebase (REQUIRED AT THE START).
  *
+ * @param apiKey Firebase API key.
+ * @param databaseURL Firebase Realtime Database URL.
  * @return Whether loaded successfully.
  */
-bool loadFirebase(const char *api_key, const char *database_url);
+bool loadFirebase(const char *apiKey, const char *databaseURL);
 
 #endif

@@ -7,13 +7,7 @@ bool loadEspNow()
   return esp_now_init() == ESP_OK;
 }
 
-bool registerReceiver(uint8_t receiverMACaddress[])
+bool loadEspNow(void (*callback)(const uint8_t *mac, const uint8_t *data, int len))
 {
-  esp_now_peer_info_t peerInfo;
-  memcpy(peerInfo.peer_addr, receiverMACaddress, 6);
-  peerInfo.channel = 0;
-  peerInfo.encrypt = false;
-  peerInfo.ifidx = WIFI_IF_STA;
-
-  return esp_now_add_peer(&peerInfo) == ESP_OK;
+  return loadEspNow() && esp_now_register_recv_cb(callback) == ESP_OK;
 }
