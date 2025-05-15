@@ -1,4 +1,3 @@
-// app/(auth)/login.tsx
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -12,19 +11,17 @@ import {
   Animated,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "../../lib/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
 import logo from "../../assets/logo.png";
+import { useLogin } from "@/hooks/auth/useLogin";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [emailOrUsername, setEmailOrUsername] = useState("");
-  const [password, setPassword]               = useState("");
-  const [loading, setLoading]                 = useState(false);
-  const [errorMessage, setErrorMessage]       = useState<string | null>(null);
-  const [showErrorModal, setShowErrorModal]   = useState(false);
+  const [identifier, setIdentifier] = useState("");
+  const [password, setPassword] = useState("");
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+
+  const { login, loading, error } = useLogin();
 
   const fade = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -33,50 +30,28 @@ export default function LoginPage() {
       duration: 400,
       useNativeDriver: true,
     }).start();
-  }, []);
-
+  }, [fade]);
+  
   const handleLogin = async () => {
     setAttemptedSubmit(true);
 
-    if (!emailOrUsername.trim() || !password) {
-      setErrorMessage("Please enter both username/email and password.");
-      return setShowErrorModal(true);
-    }
-
-    setLoading(true);
-    setErrorMessage(null);
-
-    try {
-      let emailToUse = emailOrUsername.trim();
-      if (!emailToUse.includes("@")) {
-        const usersCol = collection(db, "users");
-        const q = query(usersCol, where("username", "==", emailToUse));
-        const snap = await getDocs(q);
-
-        if (snap.empty) {
-          throw new Error("No account found for that username.");
-        }
-        emailToUse = snap.docs[0].data().email;
-      }
-      await signInWithEmailAndPassword(auth, emailToUse, password);
-      console.log("✅ signInWithEmailAndPassword resolved. auth.currentUser:", auth.currentUser);
-      router.replace("/(tabs)/home");
-    } catch (e: any) {
-      setErrorMessage(e.message);
+    if (!identifier.trim() || !password) {
       setShowErrorModal(true);
-    } finally {
-      setLoading(false);
+      return;
+    }
+    
+    try {
+      await login(identifier.trim(), password);
+      router.replace("/(tabs)/home");
+    } catch {
+      setShowErrorModal(true);
     }
   };
 
-  const canSubmit = !!emailOrUsername.trim() && !!password;
-  const inputClass = (val: string) =>
-    `rounded-lg p-3 mb-4 border ${
-      attemptedSubmit && !val ? "border-red-500" : "border-gray-300"
-    }`;
+  const canSubmit = !!identifier.trim() && !!password;
 
   return (
-    <View className="flex-1 bg-gray-50 px-4 justify-center">
+    <View className="justify-center flex-1 px-4 bg-gray-50">
       {/* Logo */}
       <View className="items-center mb-6">
         <Image
@@ -88,23 +63,31 @@ export default function LoginPage() {
 
       {/* Animated Card */}
       <Animated.View style={{ opacity: fade }}>
-        <View className="bg-white rounded-2xl p-6 shadow-lg">
-          <Text className="text-2xl font-bold text-blue-900 mb-6 text-center">
+        <View className="p-6 bg-white shadow-lg rounded-2xl">
+          <Text className="mb-6 text-2xl font-bold text-center text-blue-900">
             Welcome Back
           </Text>
 
           {/* Username or Email */}
           <TextInput
-            className={inputClass(emailOrUsername)}
+            className={`rounded-lg p-3 mb-4 border ${
+              attemptedSubmit && !identifier.trim()
+                ? "border-red-500"
+                : "border-gray-300"
+            }`}
             placeholder="Username or Email"
             autoCapitalize="none"
-            value={emailOrUsername}
-            onChangeText={setEmailOrUsername}
+            value={identifier}
+            onChangeText={setIdentifier}
           />
 
           {/* Password */}
           <TextInput
-            className={inputClass(password)}
+            className={`rounded-lg p-3 mb-4 border ${
+              attemptedSubmit && !password
+                ? "border-red-500"
+                : "border-gray-300"
+            }`}
             placeholder="Password"
             secureTextEntry
             value={password}
@@ -115,14 +98,14 @@ export default function LoginPage() {
           <TouchableOpacity
             className={`py-3 rounded-lg items-center mb-4 ${
               canSubmit ? "bg-blue-600" : "bg-blue-300"
-            }`}
+            } ${loading ? "opacity-60" : ""}`}
             onPress={handleLogin}
             disabled={!canSubmit || loading}
           >
             {loading ? (
               <ActivityIndicator color="#FFF" />
             ) : (
-              <Text className="text-white font-semibold text-lg">Log In</Text>
+              <Text className="text-lg font-semibold text-white">Log In</Text>
             )}
           </TouchableOpacity>
 
@@ -130,7 +113,7 @@ export default function LoginPage() {
           <View className="flex-row justify-center">
             <Text className="text-gray-500">Don't have an account? </Text>
             <TouchableOpacity onPress={() => router.push("/signup")}>
-              <Text className="text-blue-600 font-semibold">Sign Up</Text>
+              <Text className="font-semibold text-blue-600">Sign Up</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -143,19 +126,21 @@ export default function LoginPage() {
         animationType="fade"
         onRequestClose={() => setShowErrorModal(false)}
       >
-        <View className="flex-1 bg-black bg-opacity-50 justify-center items-center">
-          <View className="bg-white rounded-xl p-6 w-4/5 shadow-lg">
-            <Text className="text-xl font-bold text-red-600 mb-4">
-              {errorMessage?.includes("password")
+        <View className="items-center justify-center flex-1 bg-black bg-opacity-50">
+          <View className="w-4/5 p-6 bg-white shadow-lg rounded-xl">
+            <Text className="mb-4 text-xl font-bold text-red-600">
+              {error?.toLowerCase().includes("password")
                 ? "Login Failed"
                 : "Oops!"}
             </Text>
-            <Text className="text-gray-700 mb-6">{errorMessage}</Text>
+            <Text className="mb-6 text-gray-700">
+              {error || "Please try again."}
+            </Text>
             <Pressable
-              className="bg-red-600 py-2 rounded-lg items-center"
+              className="items-center py-2 bg-red-600 rounded-lg"
               onPress={() => setShowErrorModal(false)}
             >
-              <Text className="text-white font-semibold">Dismiss</Text>
+              <Text className="font-semibold text-white">Dismiss</Text>
             </Pressable>
           </View>
         </View>

@@ -1,43 +1,300 @@
+// components/Header.tsx
 import React from "react";
-import { View, Text, TouchableOpacity, Image, StatusBar } from "react-native";
+import {
+  StatusBar,
+  Image,
+  Text,
+  TouchableOpacity,
+  View,
+  Dimensions,
+  SafeAreaView,
+  ScrollView,
+  Platform,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import { usePathname } from "expo-router";
-import { getTitleFromPath } from "../lib/title-utils";
+import Animated from "react-native-reanimated";
+import { useHeader } from "@/hooks/common/useHeader";
+import { router } from "expo-router";
 
 export default function Header() {
-  const pathname = usePathname();
-  const title = (getTitleFromPath(pathname) || "Home").toUpperCase();
+  const {
+    title,
+    user,
+    profile,
+    familyName,
+    toggle,
+    signOutUser,
+    signingOut,
+    drawerStyle,
+    dividerStyle,
+  } = useHeader();
+
+  const drawerWidth = Dimensions.get("window").width * 0.75;
+  const topPadding =
+    Platform.OS === "ios" ? 50 : (StatusBar.currentHeight ?? 0) + 10;
 
   return (
     <>
-      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
-      <LinearGradient
-        colors={["#2563EB", "#1E40AF"]}
-        start={[0, 0]}
-        end={[1, 0]}
-        className="px-4 h-24 shadow-lg"
+      <StatusBar
+        translucent
+        backgroundColor="transparent"
+        barStyle="light-content"
+      />
+
+      {/* Top bar with flat purple and rounded bottom */}
+      <View
+        style={{
+          backgroundColor: "#4F46E5",
+          paddingTop: topPadding,
+          paddingBottom: 16,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.15,
+          shadowRadius: 6,
+          elevation: 4,
+        }}
       >
-        <View className="flex-row items-center justify-between pt-8">
-          {/* Menu */}
-          <TouchableOpacity activeOpacity={0.7}>
-            <Feather name="menu" size={28} color="#FFF" />
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative",
+            paddingHorizontal: 16,
+          }}
+        >
+          {/* Avatar button */}
+          <TouchableOpacity
+            onPress={toggle}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={{
+              position: "absolute",
+              left: 16,
+              top: 0,
+            }}
+          >
+            <Image
+              source={{
+                uri:
+                  user.photoURL ||
+                  `https://i.pravatar.cc/40?u=${encodeURIComponent(
+                    user.email!
+                  )}`,
+              }}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                borderWidth: 2,
+                borderColor: "#fff",
+              }}
+            />
           </TouchableOpacity>
 
           {/* Title */}
-          <Text className="text-white text-2xl font-bold">
+          <Text
+            style={{
+              color: "#fff",
+              fontSize: 22,
+              fontWeight: "700",
+            }}
+          >
             {title}
           </Text>
-
-          {/* Avatar */}
-          <TouchableOpacity activeOpacity={0.7}>
-            <Image
-              source={{ uri: "https://i.pravatar.cc/40" }}
-              className="w-10 h-10 rounded-full border-2 border-white"
-            />
-          </TouchableOpacity>
         </View>
-      </LinearGradient>
+      </View>
+
+      {/* Drawer panel */}
+      <Animated.View
+        className="absolute top-0 bottom-0 left-0 bg-white shadow-lg rounded-tr-3xl rounded-br-3xl"
+        style={[{ width: drawerWidth }, drawerStyle]}
+      >
+        <SafeAreaView className="flex-1">
+          <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
+            {/* Drawer header */}
+            <View className="flex-row items-center justify-between px-4 pt-4 pb-2">
+              <View className="flex-row items-center">
+                <Image
+                  source={{
+                    uri:
+                      user.photoURL ||
+                      `https://i.pravatar.cc/80?u=${encodeURIComponent(
+                        user.email!
+                      )}`,
+                  }}
+                  className="w-12 h-12 rounded-full"
+                />
+                <View className="ml-3">
+                  <Text className="text-lg font-bold ">
+                    {profile?.username ?? "You"}
+                  </Text>
+                  <Text className="text-sm ">
+                    @{user.email?.split("@")[0]}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={toggle}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Feather name="x" size={24} color="#4F46E5" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Family info */}
+            <View className="px-4 py-2">
+              <Text>
+                <Text> Family: </Text>
+                <Text className="font-bold ">
+                  {familyName || "–"}
+                </Text>
+              </Text>
+            </View>
+
+            {/* Animated divider */}
+            <Animated.View
+              className="h-0.5 self-center my-2 rounded-full"
+              style={dividerStyle}
+            />
+
+            {/* Account section */}
+            <View className="px-4 mt-4">
+              <Text className="mb-2 text-sm font-semibold ">
+                Account
+              </Text>
+
+              <TouchableOpacity
+                className="flex-row items-center py-3"
+                activeOpacity={0.7}
+                onPress={() => {
+                  toggle();
+                  router.push("/profile");
+                }}
+              >
+                <Feather name="user" size={20} color="#4F46E5" />
+                <Text className="ml-4 text-base ">
+                  Manage Profile
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="flex-row items-center py-3"
+                activeOpacity={0.7}
+                onPress={() => {
+                  toggle();
+                  router.push("/family");
+                }}
+              >
+                <Feather name="users" size={20} color="#4F46E5" />
+                <Text className="ml-4 text-base">
+                  Manage Family
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Devices section */}
+            <View className="px-4 mt-6">
+              <Text className="mb-2 text-sm font-semibold ">
+                Devices
+              </Text>
+
+              <TouchableOpacity
+                className="flex-row items-center py-3"
+                activeOpacity={0.7}
+                onPress={() => {
+                  toggle();
+                  router.push("/devices");
+                }}
+              >
+                <Feather name="smartphone" size={20} color="#4F46E5" />
+                <Text className="ml-4 text-base ">
+                  Your Devices
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="flex-row items-center py-3"
+                activeOpacity={0.7}
+                onPress={() => {
+                  toggle();
+                  router.push("/notifications");
+                }}
+              >
+                <Feather name="bell" size={20} color="#4F46E5" />
+                <Text className="ml-4 text-base">
+                  Notifications
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Settings section */}
+            <View className="px-4 mt-6">
+              <Text className="mb-2 text-sm font-semibold ">
+                Settings
+              </Text>
+
+              <TouchableOpacity
+                className="flex-row items-center py-3"
+                activeOpacity={0.7}
+                onPress={() => {
+                  toggle();
+                  router.push("/help");
+                }}
+              >
+                <Feather name="help-circle" size={20} color="#4F46E5" />
+                <Text className="ml-4 text-base ">
+                  Help & Support
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="flex-row items-center py-3"
+                activeOpacity={0.7}
+                onPress={() => {
+                  toggle();
+                  router.push("/settings/theme");
+                }}
+              >
+                <Feather name="sun" size={20} color="#4F46E5" />
+                <Text className="ml-4 text-base ">
+                  Theme
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="flex-row items-center py-3"
+                activeOpacity={0.7}
+                onPress={() => {
+                  toggle();
+                  router.push("/about");
+                }}
+              >
+                <Feather name="info" size={20} color="#4F46E5" />
+                <Text className="ml-4 text-base">
+                  About
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Sign Out */}
+            <View className="h-px mx-4 my-4 color="/>
+            <TouchableOpacity
+              onPress={signOutUser}
+              disabled={signingOut}
+              className="flex-row items-center px-4 py-3 rounded-lg"
+            >
+              <Feather name="log-out" size={20} color="#DC2626" />
+              <Text
+                className={`ml-4 font-semibold ${
+                  signingOut ? "text-red-300" : "text-red-600"
+                }`}
+              >
+                {signingOut ? "Signing out…" : "Sign Out"}
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
+      </Animated.View>
     </>
   );
 }
