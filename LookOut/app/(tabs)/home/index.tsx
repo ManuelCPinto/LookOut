@@ -1,5 +1,12 @@
 import React from "react";
-import { SafeAreaView, ScrollView, View, Text, TouchableOpacity, Image} from "react-native";
+import {
+  SafeAreaView,
+  ScrollView,
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import cameraIcon from "@/assets/camera.png";
@@ -30,82 +37,81 @@ export default function HomeScreen() {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-gray-50">
-      <ScrollView className="px-4 py-4">
-
-        {/* Card 1: Welcome + Stats + Devices */}
-        <View className="p-4 mb-4 bg-white shadow-lg rounded-2xl">
-          <Text className="mb-1 text-xl font-bold text-blue-900">
+    <SafeAreaView className="flex-1 bg-gray-100">
+      <ScrollView className="p-4 space-y-4">
+        
+        {/* ── Welcome + Stats + Devices ── */}
+        <View className="px-4 py-5 bg-white shadow rounded-2xl">
+          {/* Greeting */}
+          <Text className="text-xl font-semibold text-gray-800">
             Welcome back 👋
           </Text>
-          <Text className="mb-4 text-gray-500">
+          <Text className="mt-1 text-gray-500">
             Monitor your spaces in real time with LookOut.
           </Text>
 
-          {/* Stats row */}
-          <View className="flex-row justify-between mb-4">
+          {/* Stats */}
+          <View className="flex-row justify-between mt-4">
             {stats.map((s, i) => (
               <View key={i} className="items-center flex-1">
-                <Text className="text-2xl font-bold text-blue-600">
+                <Text className="text-2xl font-bold text-[#4F46E5]">
                   {s.value}
                 </Text>
-                <Text className="text-xs text-gray-500">
+                <Text className="mt-1 text-xs text-gray-500">
                   {s.label}
                 </Text>
               </View>
             ))}
           </View>
 
-          {/* Devices grid */}
-          <Text className="mb-2 text-lg font-semibold text-blue-900">
+          {/* Your Devices */}
+          <Text className="mt-6 mb-2 text-lg font-medium text-gray-800">
             Your Devices
           </Text>
-          <View className="flex-row flex-wrap justify-between mb-4">
+          <View className="flex-row flex-wrap justify-between">
             {devices.map((d, i) => (
               <View
                 key={i}
-                className="w-[48%] bg-gray-100 rounded-xl p-3 mb-4 items-center"
+                className="w-[48%] bg-white rounded-xl p-3 mb-4 items-center border border-gray-200"
               >
                 <Image
                   source={d.icon}
-                  className="w-20 h-20 mb-2 rounded-lg"
+                  className="w-20 h-20 mb-2"
                   resizeMode="contain"
                 />
-                <Text className="text-sm font-medium text-gray-700">
+                <Text className="text-base font-medium text-gray-700">
                   {d.name}
                 </Text>
               </View>
             ))}
           </View>
 
-          {/* View All Devices*/}
+          {/* View All */}
           <TouchableOpacity
-            className="self-center px-5 py-2 bg-blue-600 rounded-full"
+            className="mt-2 py-3 bg-[#4F46E5] rounded-full items-center"
             onPress={() => router.push("/devices")}
           >
-            <Text className="font-semibold text-white">
-              View All Devices
-            </Text>
+            <Text className="font-semibold text-white">View All Devices</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Card 2: Recent Alerts */}
-        <View className="p-4 bg-white shadow-lg rounded-2xl">
-          <Text className="mb-3 text-lg font-semibold text-blue-900">
+        {/* ── Recent Alerts ── */}
+        <View className="px-4 py-5 bg-white shadow rounded-2xl">
+          <Text className="text-lg font-medium text-gray-800">
             Recent Alerts
           </Text>
 
-          <View className="mb-4 space-y-3">
+          <View className="mt-4 space-y-3">
             {alerts.map((a, i) => (
               <View
                 key={i}
-                className="flex-row items-center p-3 border-l-4 border-yellow-300 rounded-lg bg-gray-50"
+                className="flex-row items-center bg-gray-50 px-3 py-3 rounded-lg border-l-4 border-[#4F46E5]"
               >
                 <Ionicons
                   name={a.type === "doorbell" ? "notifications-outline" : "walk-outline"}
                   size={20}
-                  color="#F59E0B"
-                  style={{ marginRight: 12 }}
+                  color="#4F46E5"
+                  className="mr-3"
                 />
 
                 <View className="flex-1">
@@ -123,15 +129,13 @@ export default function HomeScreen() {
           </View>
 
           <TouchableOpacity
-            className="items-center w-full py-3 bg-blue-600 rounded-full"
+            className="mt-4 py-3 bg-[#4F46E5] rounded-full items-center"
             onPress={() => router.push("/logs")}
           >
-            <Text className="font-semibold text-white">
-              View All Alerts
-            </Text>
+            <Text className="font-semibold text-white">View All Alerts</Text>
           </TouchableOpacity>
         </View>
-
+        
       </ScrollView>
     </SafeAreaView>
   );

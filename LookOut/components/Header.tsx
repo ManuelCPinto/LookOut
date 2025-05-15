@@ -9,9 +9,9 @@ import {
   Dimensions,
   SafeAreaView,
   ScrollView,
+  Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import Animated from "react-native-reanimated";
 import { useHeader } from "@/hooks/common/useHeader";
 import { router } from "expo-router";
@@ -30,6 +30,8 @@ export default function Header() {
   } = useHeader();
 
   const drawerWidth = Dimensions.get("window").width * 0.75;
+  const topPadding =
+    Platform.OS === "ios" ? 50 : (StatusBar.currentHeight ?? 0) + 10;
 
   return (
     <>
@@ -39,18 +41,37 @@ export default function Header() {
         barStyle="light-content"
       />
 
-      {/* Top gradient bar */}
-      <LinearGradient
-        colors={["#2563EB", "#1E40AF"]}
-        start={[0, 0]}
-        end={[1, 0]}
-        className="relative h-24 px-4 shadow-md"
+      {/* Top bar with flat purple and rounded bottom */}
+      <View
+        style={{
+          backgroundColor: "#4F46E5",
+          paddingTop: topPadding,
+          paddingBottom: 16,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.15,
+          shadowRadius: 6,
+          elevation: 4,
+        }}
       >
-        <View className="flex-row items-center justify-center pt-8">
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative",
+            paddingHorizontal: 16,
+          }}
+        >
+          {/* Avatar button */}
           <TouchableOpacity
             onPress={toggle}
-            className="absolute p-2 left-4 top-8"
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={{
+              position: "absolute",
+              left: 16,
+              top: 0,
+            }}
           >
             <Image
               source={{
@@ -60,12 +81,28 @@ export default function Header() {
                     user.email!
                   )}`,
               }}
-              className="w-10 h-10 border-2 border-white rounded-full"
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                borderWidth: 2,
+                borderColor: "#fff",
+              }}
             />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-white">{title}</Text>
+
+          {/* Title */}
+          <Text
+            style={{
+              color: "#fff",
+              fontSize: 22,
+              fontWeight: "700",
+            }}
+          >
+            {title}
+          </Text>
         </View>
-      </LinearGradient>
+      </View>
 
       {/* Drawer panel */}
       <Animated.View
@@ -88,24 +125,29 @@ export default function Header() {
                   className="w-12 h-12 rounded-full"
                 />
                 <View className="ml-3">
-                  <Text className="text-lg font-bold text-gray-900">
+                  <Text className="text-lg font-bold ">
                     {profile?.username ?? "You"}
                   </Text>
-                  <Text className="text-sm text-gray-500">
+                  <Text className="text-sm ">
                     @{user.email?.split("@")[0]}
                   </Text>
                 </View>
               </View>
-              <TouchableOpacity onPress={toggle} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                <Feather name="x" size={24} color="#333" />
+              <TouchableOpacity
+                onPress={toggle}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Feather name="x" size={24} color="#4F46E5" />
               </TouchableOpacity>
             </View>
 
             {/* Family info */}
             <View className="px-4 py-2">
               <Text>
-                <Text className="text-gray-500">Family: </Text>
-                <Text className="font-bold text-gray-900">{familyName || "–"}</Text>
+                <Text> Family: </Text>
+                <Text className="font-bold ">
+                  {familyName || "–"}
+                </Text>
               </Text>
             </View>
 
@@ -117,9 +159,10 @@ export default function Header() {
 
             {/* Account section */}
             <View className="px-4 mt-4">
-              <Text className="mb-2 text-sm font-semibold text-gray-500">
+              <Text className="mb-2 text-sm font-semibold ">
                 Account
               </Text>
+
               <TouchableOpacity
                 className="flex-row items-center py-3"
                 activeOpacity={0.7}
@@ -128,11 +171,12 @@ export default function Header() {
                   router.push("/profile");
                 }}
               >
-                <Feather name="user" size={20} color="#333" />
-                <Text className="ml-4 text-base text-gray-900">
+                <Feather name="user" size={20} color="#4F46E5" />
+                <Text className="ml-4 text-base ">
                   Manage Profile
                 </Text>
               </TouchableOpacity>
+
               <TouchableOpacity
                 className="flex-row items-center py-3"
                 activeOpacity={0.7}
@@ -141,8 +185,8 @@ export default function Header() {
                   router.push("/family");
                 }}
               >
-                <Feather name="users" size={20} color="#333" />
-                <Text className="ml-4 text-base text-gray-900">
+                <Feather name="users" size={20} color="#4F46E5" />
+                <Text className="ml-4 text-base">
                   Manage Family
                 </Text>
               </TouchableOpacity>
@@ -150,9 +194,10 @@ export default function Header() {
 
             {/* Devices section */}
             <View className="px-4 mt-6">
-              <Text className="mb-2 text-sm font-semibold text-gray-500">
+              <Text className="mb-2 text-sm font-semibold ">
                 Devices
               </Text>
+
               <TouchableOpacity
                 className="flex-row items-center py-3"
                 activeOpacity={0.7}
@@ -161,11 +206,12 @@ export default function Header() {
                   router.push("/devices");
                 }}
               >
-                <Feather name="smartphone" size={20} color="#333" />
-                <Text className="ml-4 text-base text-gray-900">
+                <Feather name="smartphone" size={20} color="#4F46E5" />
+                <Text className="ml-4 text-base ">
                   Your Devices
                 </Text>
               </TouchableOpacity>
+
               <TouchableOpacity
                 className="flex-row items-center py-3"
                 activeOpacity={0.7}
@@ -174,8 +220,8 @@ export default function Header() {
                   router.push("/notifications");
                 }}
               >
-                <Feather name="bell" size={20} color="#333" />
-                <Text className="ml-4 text-base text-gray-900">
+                <Feather name="bell" size={20} color="#4F46E5" />
+                <Text className="ml-4 text-base">
                   Notifications
                 </Text>
               </TouchableOpacity>
@@ -183,9 +229,10 @@ export default function Header() {
 
             {/* Settings section */}
             <View className="px-4 mt-6">
-              <Text className="mb-2 text-sm font-semibold text-gray-500">
+              <Text className="mb-2 text-sm font-semibold ">
                 Settings
               </Text>
+
               <TouchableOpacity
                 className="flex-row items-center py-3"
                 activeOpacity={0.7}
@@ -194,11 +241,12 @@ export default function Header() {
                   router.push("/help");
                 }}
               >
-                <Feather name="help-circle" size={20} color="#333" />
-                <Text className="ml-4 text-base text-gray-900">
+                <Feather name="help-circle" size={20} color="#4F46E5" />
+                <Text className="ml-4 text-base ">
                   Help & Support
                 </Text>
               </TouchableOpacity>
+
               <TouchableOpacity
                 className="flex-row items-center py-3"
                 activeOpacity={0.7}
@@ -207,9 +255,12 @@ export default function Header() {
                   router.push("/settings/theme");
                 }}
               >
-                <Feather name="sun" size={20} color="#333" />
-                <Text className="ml-4 text-base text-gray-900">Theme</Text>
+                <Feather name="sun" size={20} color="#4F46E5" />
+                <Text className="ml-4 text-base ">
+                  Theme
+                </Text>
               </TouchableOpacity>
+
               <TouchableOpacity
                 className="flex-row items-center py-3"
                 activeOpacity={0.7}
@@ -218,27 +269,29 @@ export default function Header() {
                   router.push("/about");
                 }}
               >
-                <Feather name="info" size={20} color="#333" />
-                <Text className="ml-4 text-base text-gray-900">About</Text>
+                <Feather name="info" size={20} color="#4F46E5" />
+                <Text className="ml-4 text-base">
+                  About
+                </Text>
               </TouchableOpacity>
             </View>
 
-            {/* Sign Out (last item) */}
-            <View className="h-px mx-4 my-4 bg-gray-200" />
-              <TouchableOpacity
-                onPress={signOutUser}
-                disabled={signingOut}
-                className="flex-row items-center px-4 py-3 rounded-lg"
+            {/* Sign Out */}
+            <View className="h-px mx-4 my-4 color="/>
+            <TouchableOpacity
+              onPress={signOutUser}
+              disabled={signingOut}
+              className="flex-row items-center px-4 py-3 rounded-lg"
+            >
+              <Feather name="log-out" size={20} color="#DC2626" />
+              <Text
+                className={`ml-4 font-semibold ${
+                  signingOut ? "text-red-300" : "text-red-600"
+                }`}
               >
-                <Feather name="log-out" size={20} color="#DC2626" />
-                <Text
-                  className={`ml-4 font-semibold ${
-                    signingOut ? "text-red-400" : "text-red-400"
-                  }`}
-                >
-                  {signingOut ? "Signing out…" : "Sign Out"}
-                </Text>
-              </TouchableOpacity>
+                {signingOut ? "Signing out…" : "Sign Out"}
+              </Text>
+            </TouchableOpacity>
           </ScrollView>
         </SafeAreaView>
       </Animated.View>

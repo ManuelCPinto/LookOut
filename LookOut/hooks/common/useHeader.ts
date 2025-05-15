@@ -13,8 +13,6 @@ import { useProfile } from "@/hooks/user/useProfile";
 import { useUserFamilies } from "@/hooks/family/useUserFamilies";
 import { useSignOut } from "@/hooks/auth/useSignOut";
 
-const HEADER_BLUE = "#2563EB";
-
 /**
  * Encapsulates all header‐related logic:
  * - derives the screen title from the current path
@@ -52,15 +50,16 @@ export function useHeader() {
   }, [open, drawerWidth]);
   const dividerStyle = useAnimatedStyle(() => ({
     width: dividerWidth.value,
-    backgroundColor: HEADER_BLUE,
+    backgroundColor: "#4F46E5"
+    ,
   }));
 
+  const { signOutUser, loading: signingOut } = useSignOut();
   const user = auth.currentUser!;
   const { profile } = useProfile(user.uid);
   const { families } = useUserFamilies(user.uid);
   const familyName = families[0]?.name ?? "";
 
-  const { signOutUser, loading: signingOut } = useSignOut();
 
   return {
     title,

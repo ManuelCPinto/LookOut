@@ -153,13 +153,10 @@ export default function FamilyDetailScreen() {
             </Text>
             <TouchableOpacity
               onPress={leaveFamily}
-              className="px-3 py-1 border border-gray-300 rounded-full"
+              className="px-3 py-1 bg-white border border-red-200 rounded-full"
             >
               <Text
-                className={`text-sm font-medium ${
-                  isOwner ? "text-red-600" : "text-gray-600"
-                }`}
-              >
+                className={"text-sm font-medium text-red-400"}>
                 {isOwner ? "Delete Family" : "Leave Family"}
               </Text>
             </TouchableOpacity>
