@@ -1,7 +1,7 @@
 #ifndef HARDWARE_ACTIONS_H
 #define HARDWARE_ACTIONS_H
 
-#include <Arduino.h>
+#include "database.h"
 
 using namespace std;
 

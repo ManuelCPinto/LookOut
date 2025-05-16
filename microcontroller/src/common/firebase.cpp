@@ -1,7 +1,7 @@
 #include <Firebase_ESP_Client.h>
 #include "addons/TokenHelper.h"
 #include "addons/RTDBHelper.h"
-#include "firebase_loader.h"
+#include "firebase.h"
 
 FirebaseAuth auth;
 FirebaseConfig config;

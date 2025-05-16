@@ -1,5 +1,5 @@
-#ifndef FIREBASE_LOADER_H
-#define FIREBASE_LOADER_H
+#ifndef FIREBASE_H
+#define FIREBASE_H
 
 #include <Firebase_ESP_Client.h>
 

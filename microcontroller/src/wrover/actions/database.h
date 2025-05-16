@@ -1,7 +1,7 @@
 #ifndef DATABASE_H
 #define DATABASE_H
 
-#include <json/FirebaseJson.h>
+#include <Firebase_ESP_Client.h>
 
 enum LogType
 {
@@ -26,35 +26,37 @@ struct LogData
     FirebaseJsonData result;
 
     LogType type;
-    if (json.get(result, "type") && result.success) {
-      type = (LogType) result.intValue;
+    if (json.get(result, "type") && result.success)
+    {
+      type = (LogType)result.intValue;
     }
 
     int createdAt;
-    if (json.get(result, "createdAt") && result.success) {
+    if (json.get(result, "createdAt") && result.success)
+    {
       createdAt = result.intValue;
     }
 
     String photoURL;
-    if (json.get(result, "photoURL") && result.success) {
+    if (json.get(result, "photoURL") && result.success)
+    {
       photoURL = result.stringValue;
     }
 
     String userId;
-    if (json.get(result, "userId") && result.success) {
+    if (json.get(result, "userId") && result.success)
+    {
       userId = result.stringValue;
     }
 
     return {type, createdAt, photoURL, userId};
   }
 
-  FirebaseJson toJson() const
+  void toJson(FirebaseJson json) const
   {
-    FirebaseJson json;
-    json.set("type", type);
+    json.set("type", (int)type);
     json.set("createdAt", createdAt);
     json.set("photoURL", photoURL);
-    return json;
   }
 };
 

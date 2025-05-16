@@ -1,7 +1,7 @@
 #include <HardwareSerial.h>
 #include <ArduinoJson.h>
-#include <common/wifi_loader.h>
-#include <common/camera_loader.h>
+#include <common/wifi.h>
+#include <common/camera.h>
 #include <common/env/env.h>
 #include <common/esp_now.h>
 #include <common/mqtt.h>
@@ -9,7 +9,7 @@
 #include <common/esp_now_data.h>
 #include <common/supabase.h>
 #include <common/utils.h>
-#include <common/firebase_loader.h>
+#include <common/firebase.h>
 #include "actions/hardware.h"
 #include "actions/database.h"
 
@@ -26,7 +26,7 @@ const size_t MQTT_TOPIC_COUNT = sizeof(MQTT_TOPICS) / sizeof(MQTT_TOPICS[0]);
 
 char UNIQUE_SINK_NODE_ID[64];
 
-EspNowReceiver espNowReceiver;
+EspNowReceiver espNowReceiver = NULL;
 
 void espNowCallback(const uint8_t *mac, const uint8_t *data, int len)
 {
@@ -76,7 +76,7 @@ void espNowCallback(const uint8_t *mac, const uint8_t *data, int len)
 
 void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
 {
-  StaticJsonDocument<200> doc;
+  JsonDocument doc;
   deserializeJson(doc, payload, length);
 
   char *topicPrefix = strcat(UNIQUE_SINK_NODE_ID, "/");

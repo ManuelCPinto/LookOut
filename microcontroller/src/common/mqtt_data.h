@@ -21,9 +21,8 @@ public:
         doc["duration"] | DEFAULT_DURATION};
   }
 
-  StaticJsonDocument<200> toJson() const
+  void toJson(JsonDocument doc) const
   {
-    StaticJsonDocument<200> doc;
     doc["duration"] = duration;
   }
 };
@@ -44,9 +43,8 @@ struct OledData
         doc["isQrCode"] | false};
   }
 
-  StaticJsonDocument<200> toJson() const
+  void toJson(JsonDocument doc) const
   {
-    StaticJsonDocument<200> doc;
     doc["message"] = message;
     doc["isQrCode"] = isQrCode;
   }
@@ -66,11 +64,9 @@ struct FingerprintData
         doc["userId"] | nullptr};
   }
 
-  StaticJsonDocument<200> toJson() const
+  void toJson(JsonDocument doc) const
   {
-    StaticJsonDocument<200> doc;
     doc["userId"] = userId;
-    return doc;
   }
 };
 

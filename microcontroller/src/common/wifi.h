@@ -1,5 +1,5 @@
-#ifndef WIFI_LOADER_H
-#define WIFI_LOADER_H
+#ifndef WIFI_H
+#define WIFI_H
 
 #include <WiFi.h>
 

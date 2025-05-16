@@ -1,5 +1,5 @@
 #include "esp_camera.h"
-#include "camera_loader.h"
+#include "camera.h"
 
 // Camera configuration for our AI Thinker module
 #define PWDN_GPIO_NUM -1

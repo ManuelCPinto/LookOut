@@ -1,8 +1,9 @@
-#include <common/camera_loader.h>
+#include <common/camera.h>
 #include <common/supabase.h>
 #include <common/utils.h>
 #include <common/env/env.h>
 #include <Firebase_ESP_Client.h>
+#undef B1
 #include <fmt/core.h>
 #include "database.h"
 
@@ -43,5 +44,7 @@ void addFingerprintUserToFirebase(const char *nodeId, const char *userId)
 
 void logToFirebase(const char *nodeId, LogData logData)
 {
-  Firebase.RTDB.setJSONAsync(&fbdo, fmt::format("/devices/{}/logs", nodeId), &logData.toJson());
+  FirebaseJson json;
+  logData.toJson(json);
+  Firebase.RTDB.setJSONAsync(&fbdo, fmt::format("/devices/{}/logs", nodeId), &json);
 }

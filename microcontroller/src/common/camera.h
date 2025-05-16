@@ -1,5 +1,5 @@
-#ifndef CAMERA_LOADER_H
-#define CAMERA_LOADER_H
+#ifndef CAMERA_H
+#define CAMERA_H
 
 #include "esp_camera.h"
 
