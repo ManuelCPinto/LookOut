@@ -26,7 +26,7 @@ const size_t MQTT_TOPIC_COUNT = sizeof(MQTT_TOPICS) / sizeof(MQTT_TOPICS[0]);
 
 char UNIQUE_SINK_NODE_ID[64];
 
-EspNowReceiver espNowReceiver = NULL;
+EspNowReceiver espNowReceiver(WROOM_MAC_ADDRESS);
 
 void espNowCallback(const uint8_t *mac, const uint8_t *data, int len)
 {
@@ -132,10 +132,15 @@ void setup()
   loadFirebase(FIREBASE_API_KEY, FIREBASE_DATABASE_URL);
   loadSupabase(SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_USERNAME, SUPABASE_PASSWORD);
   loadEspNow(espNowCallback);
-  espNowReceiver = EspNowReceiver(WROOM_MAC_ADDRESS);
+  espNowReceiver.load();
   loadMQTT(MQTT_SERVER, MQTT_PORT, mqttCallback);
 
   strcpy(UNIQUE_SINK_NODE_ID, hashMD5(WiFi.macAddress().c_str()));
+
+  Serial.println("------------------");
+  Serial.print("Unique sink node ID: ");
+  Serial.println(UNIQUE_SINK_NODE_ID);
+  Serial.println("------------------");
 }
 
 void loop()

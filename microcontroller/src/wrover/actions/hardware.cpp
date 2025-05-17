@@ -25,7 +25,7 @@ void takePhotoToSupabase(const char *bucket, const char *folderName, function<vo
   camera_fb_t *fb = takePhoto();
 
   time_t now = time(NULL);
-  string filename = now + ".jpg";
+  string filename = to_string(now) + ".jpg";
   string filePath = (string)folderName + "/" + filename;
 
   int res = supabase.upload(bucket, filePath.c_str(), "image/jpeg", fb->buf, fb->len);
@@ -46,5 +46,5 @@ void logToFirebase(const char *nodeId, LogData logData)
 {
   FirebaseJson json;
   logData.toJson(json);
-  Firebase.RTDB.setJSONAsync(&fbdo, fmt::format("/devices/{}/logs", nodeId), &json);
+  Firebase.RTDB.setJSON(&fbdo, fmt::format("/devices/{}/logs/{}", nodeId, logData.createdAt), &json);
 }

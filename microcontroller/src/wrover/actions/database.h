@@ -52,7 +52,7 @@ struct LogData
     return {type, createdAt, photoURL, userId};
   }
 
-  void toJson(FirebaseJson json) const
+  void toJson(FirebaseJson &json) const
   {
     json.set("type", (int)type);
     json.set("createdAt", createdAt);

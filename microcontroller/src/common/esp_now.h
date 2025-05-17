@@ -2,8 +2,6 @@
 #define ESP_NOW_H
 
 #include <esp_now.h>
-#include <stdexcept>
-#include <string.h>
 
 /**
  * Loads ESP-NOW (REQUIRED AT THE START).
@@ -24,18 +22,17 @@ struct EspNowReceiver
 {
   uint8_t *macAddress;
 
-  EspNowReceiver(uint8_t *m) : macAddress(m)
+  EspNowReceiver(uint8_t *m) : macAddress(m) {}
+
+  bool load()
   {
     esp_now_peer_info_t peerInfo;
-    memcpy(peerInfo.peer_addr, m, 6);
+    memcpy(peerInfo.peer_addr, macAddress, 6);
     peerInfo.channel = 0;
     peerInfo.encrypt = false;
     peerInfo.ifidx = WIFI_IF_STA;
 
-    if (esp_now_add_peer(&peerInfo) != ESP_OK)
-    {
-      throw std::runtime_error("Failed to add peer");
-    }
+    return esp_now_add_peer(&peerInfo) == ESP_OK;
   }
 
   bool send(uint8_t *data, size_t len)

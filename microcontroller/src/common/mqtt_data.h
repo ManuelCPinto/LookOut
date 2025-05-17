@@ -21,7 +21,7 @@ public:
         doc["duration"] | DEFAULT_DURATION};
   }
 
-  void toJson(JsonDocument doc) const
+  void toJson(JsonDocument &doc) const
   {
     doc["duration"] = duration;
   }
@@ -43,7 +43,7 @@ struct OledData
         doc["isQrCode"] | false};
   }
 
-  void toJson(JsonDocument doc) const
+  void toJson(JsonDocument &doc) const
   {
     doc["message"] = message;
     doc["isQrCode"] = isQrCode;
@@ -64,7 +64,7 @@ struct FingerprintData
         doc["userId"] | nullptr};
   }
 
-  void toJson(JsonDocument doc) const
+  void toJson(JsonDocument &doc) const
   {
     doc["userId"] = userId;
   }
