@@ -36,10 +36,19 @@ struct OledData
 
   OledData(char *m, bool q) : message(m), isQrCode(q) {}
 
+  ~OledData()
+  {
+    delete[] message;
+  }
+
   static OledData fromJson(const JsonDocument &doc)
   {
+    const char *msg = doc["message"] | "";
+    char *allocatedMessage = new char[strlen(msg) + 1];
+    strcpy(allocatedMessage, msg);
+
     return {
-        doc["message"] | nullptr,
+        allocatedMessage,
         doc["isQrCode"] | false};
   }
 
@@ -58,10 +67,19 @@ struct FingerprintData
 
   FingerprintData(char *i) : userId(i) {}
 
+  ~FingerprintData()
+  {
+    delete[] userId;
+  }
+
   static FingerprintData fromJson(const JsonDocument &doc)
   {
+    const char *userId = doc["userId"] | "";
+    char *allocatedUserId = new char[strlen(userId) + 1];
+    strcpy(allocatedUserId, userId);
+
     return {
-        doc["userId"] | nullptr};
+        allocatedUserId};
   }
 
   void toJson(JsonDocument &doc) const

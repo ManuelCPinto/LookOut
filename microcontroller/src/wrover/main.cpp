@@ -24,7 +24,7 @@ const char *MQTT_TOPICS[] = {
     TAKE_PHOTO_TOPIC};
 const size_t MQTT_TOPIC_COUNT = sizeof(MQTT_TOPICS) / sizeof(MQTT_TOPICS[0]);
 
-char UNIQUE_SINK_NODE_ID[64];
+static char UNIQUE_SINK_NODE_ID[64];
 
 EspNowReceiver espNowReceiver(WROOM_MAC_ADDRESS);
 
@@ -124,23 +124,40 @@ void setup()
 {
   Serial.begin(9600);
 
+  Serial.println("Healing...");
+  delay(2000);
+
   pinMode(BUZZER_PIN, OUTPUT);
 
+  Serial.println("Loading WiFi...");
   connectWifi(WIFI_SSID, WIFI_PASSWORD);
+  Serial.println("Loading timestamp...");
   configTimestamp();
+  Serial.println("Loading camera...");
   loadCamera();
+  Serial.println("Loading Firebase...");
   loadFirebase(FIREBASE_API_KEY, FIREBASE_DATABASE_URL);
+  Serial.println("Loading Supabase...");
   loadSupabase(SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_USERNAME, SUPABASE_PASSWORD);
+  Serial.println("Loading ESP-NOW...");
   loadEspNow(espNowCallback);
-  espNowReceiver.load();
+  Serial.println("Loading MQTT...");
   loadMQTT(MQTT_SERVER, MQTT_PORT, mqttCallback);
 
-  strcpy(UNIQUE_SINK_NODE_ID, hashMD5(WiFi.macAddress().c_str()));
+  hashMD5(WiFi.macAddress().c_str(), UNIQUE_SINK_NODE_ID);
 
   Serial.println("------------------");
   Serial.print("Unique sink node ID: ");
   Serial.println(UNIQUE_SINK_NODE_ID);
+  Serial.print("MAC address: ");
+  Serial.println(WiFi.macAddress());
   Serial.println("------------------");
+
+  Serial.println("Registering ESP-NOW receiver...");
+  delay(1000);
+  espNowReceiver.load();
+
+  Serial.println("Ready!");
 }
 
 void loop()
