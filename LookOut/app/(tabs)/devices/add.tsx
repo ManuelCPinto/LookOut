@@ -1,45 +1,54 @@
-// app/(tabs)/devices/add.tsx
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   SafeAreaView,
+  StyleSheet,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import RNModal from "react-native-modal";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useClaimDevice } from "@/hooks/devices/useClaimDevice";
+import { auth } from "@/lib/firebase";
 
 export default function AddDeviceScreen() {
   const router = useRouter();
+  const uid = auth.currentUser!.uid;
+
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
 
   const [showHelp, setShowHelp] = useState(false);
-  const [scanning, setScanning] = useState(false);
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
+  const [feedbackStatus, setFeedbackStatus] = useState<"loading"|"success"|"error">("loading");
 
-  // Delay the help popup by 1s on mount
+  const { claim, claiming, error } = useClaimDevice(uid);
+
   useEffect(() => {
     const timer = setTimeout(() => setShowHelp(true), 1000);
     return () => clearTimeout(timer);
   }, []);
 
-  const handleAdd = async (code: string) => {
-    setScanning(true);
+  const handleAdd = useCallback(async (code: string) => {
+    setFeedbackStatus("loading");
+    setFeedbackVisible(true);
     try {
-      console.log("Scanned QR:", code);
-      router.back();
-    } catch (err: any) {
-      alert("Failed to add device: " + err.message);
-    } finally {
-      setScanning(false);
+      await claim(code.trim());
+      setFeedbackStatus("success");
+    } catch {
+      setFeedbackStatus("error");
     }
-  };
+    // auto-close feedback & screen
+    setTimeout(() => {
+      setFeedbackVisible(false);
+      router.back();
+    }, 2000);
+  }, [claim, router]);
 
-  // Show loading while we check/request permission
+  // permission loading
   if (!permission) {
     return (
       <SafeAreaView className="items-center justify-center flex-1 bg-black">
@@ -48,7 +57,7 @@ export default function AddDeviceScreen() {
     );
   }
 
-  // Prompt for camera permission
+  // ask for camera if not granted
   if (!permission.granted) {
     return (
       <SafeAreaView className="items-center justify-center flex-1 px-6 bg-black">
@@ -67,15 +76,13 @@ export default function AddDeviceScreen() {
 
   return (
     <View className="flex-1 bg-black">
-      {/* Instructional overlay */}
+      {/* Help Popup */}
       <RNModal
         isVisible={showHelp}
         backdropOpacity={0.5}
         animationIn="fadeIn"
         animationOut="fadeOut"
-        // user must press Got it
-        onBackdropPress={() => {}}
-        onBackButtonPress={() => {}}
+        onBackdropPress={() => setShowHelp(false)}
         propagateSwipe
       >
         <View className="items-center p-6 bg-white rounded-2xl">
@@ -93,7 +100,7 @@ export default function AddDeviceScreen() {
         </View>
       </RNModal>
 
-      {/* Live camera preview */}
+      {/* Camera Scanner */}
       <CameraView
         style={StyleSheet.absoluteFill}
         ref={cameraRef}
@@ -103,11 +110,11 @@ export default function AddDeviceScreen() {
         responsiveOrientationWhenOrientationLocked
         barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
         onBarcodeScanned={({ data }) => {
-          if (!scanning) handleAdd(data);
+          if (!claiming) handleAdd(data);
         }}
       />
 
-      {/* Back button */}
+      {/* Back Button */}
       <TouchableOpacity
         onPress={() => router.back()}
         className="absolute p-2 bg-white rounded-full top-12 left-4"
@@ -116,13 +123,37 @@ export default function AddDeviceScreen() {
         <Ionicons name="arrow-back" size={24} color="#333" />
       </TouchableOpacity>
 
-      {/* Scanning indicator */}
-      {scanning && (
-        <View className="absolute inset-0 items-center justify-center bg-black bg-opacity-50">
-          <ActivityIndicator size="large" color="#4F46E5" />
-          <Text className="mt-2 text-white">Registering device…</Text>
+      {/* Feedback Modal */}
+      <RNModal
+        isVisible={feedbackVisible}
+        backdropOpacity={0.5}
+        animationIn="zoomIn"
+        animationOut="zoomOut"
+        style={{ justifyContent: "center", alignItems: "center" }}
+      >
+        <View className="items-center p-6 bg-white rounded-2xl">
+          {feedbackStatus === "loading" && (
+            <>
+              <ActivityIndicator size="large" color="#4F46E5" />
+              <Text className="mt-4 text-gray-700">Registering…</Text>
+            </>
+          )}
+          {feedbackStatus === "success" && (
+            <>
+              <Ionicons name="checkmark-circle" size={64} color="#10B981" />
+              <Text className="mt-4 text-gray-700">Device added!</Text>
+            </>
+          )}
+          {feedbackStatus === "error" && (
+            <>
+              <Ionicons name="alert-circle" size={64} color="#EF4444" />
+              <Text className="mt-4 text-center text-gray-700">
+                {error ?? "Failed to add device"}
+              </Text>
+            </>
+          )}
         </View>
-      )}
+      </RNModal>
     </View>
   );
 }

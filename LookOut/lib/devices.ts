@@ -65,6 +65,12 @@ export async function createDevice(
   };
 }
 
+
+export async function claimDevice(deviceId: string, uid: string) {
+  const ref = doc(db, "devices", deviceId);
+  await updateDoc(ref, { ownerId: uid });
+}
+
 /**
  * Update fields on an existing device.
  * @param deviceId 

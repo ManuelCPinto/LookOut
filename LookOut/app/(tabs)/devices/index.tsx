@@ -67,7 +67,6 @@ export default function DevicesScreen() {
       (statusFilter === "all" ? true : d.status === statusFilter)
   );
 
-   // Animatable ref for the + button
    const addBtnRef = useRef<any>(null);
 
    const handleAddPress = () => {
