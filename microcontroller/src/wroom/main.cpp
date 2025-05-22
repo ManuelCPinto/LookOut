@@ -8,6 +8,8 @@
 #include <common/oled.h>
 #include <common/fingerprint.h>
 #include <unordered_map>
+#undef B1
+#include <fmt/core.h>
 
 using namespace std;
 
@@ -15,7 +17,7 @@ String MQTT_TOPICS[] = {
     OledData::TOPIC,
     FingerprintData::TOPIC};
 const size_t MQTT_TOPIC_COUNT = sizeof(MQTT_TOPICS) / sizeof(MQTT_TOPICS[0]);
-String *fullTopics = addPrefixToTopics(WROVER_UNIQUE_ID, MQTT_TOPICS, MQTT_TOPIC_COUNT);
+String *fullTopics;
 
 std::unordered_map<int, string> fingerprintUserIds;
 
@@ -46,7 +48,7 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
   JsonDocument doc;
   deserializeJson(doc, payload, length);
 
-  string topicPrefix = string(WROVER_UNIQUE_ID) + "/";
+  string topicPrefix = string(WROOM_UNIQUE_ID) + "/";
   size_t topicPrefixLen = strlen(topicPrefix.c_str());
   if (strncmp(topic, topicPrefix.c_str(), topicPrefixLen) != 0)
   {
@@ -109,6 +111,8 @@ void setup()
   loadFingerprint();
   Serial.println("Loading MQTT...");
   loadMQTT(MQTT_SERVER, MQTT_PORT, mqttCallback);
+
+  fullTopics = addPrefixToTopics(fmt::format("{}/", WROOM_UNIQUE_ID).c_str(), MQTT_TOPICS, MQTT_TOPIC_COUNT);
 
   Serial.println("------------------");
   Serial.print("Unique ID: ");

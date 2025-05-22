@@ -33,9 +33,9 @@ char *macToString(uint8_t mac[6])
 }
 
 String* addPrefixToTopics(const String& prefix, const String topics[], int numTopics) {
-    String newTopics[numTopics];
+    String* newTopics = new String[numTopics];
 
-    for (int i = 0; i < numTopics; ++i) {
+    for (int i = 0; i < numTopics; i++) {
         newTopics[i] = prefix + topics[i];
     }
 

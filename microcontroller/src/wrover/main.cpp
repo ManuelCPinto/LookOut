@@ -10,6 +10,8 @@
 #include <common/firebase.h>
 #include "actions/hardware.h"
 #include "actions/database.h"
+#undef B1
+#include <fmt/core.h>
 
 using namespace std;
 
@@ -22,7 +24,7 @@ String MQTT_TOPICS[] = {
     TAKE_PHOTO_TOPIC,
     OledData::TOPIC};
 const size_t MQTT_TOPIC_COUNT = sizeof(MQTT_TOPICS) / sizeof(MQTT_TOPICS[0]);
-String* fullTopics = addPrefixToTopics(WROVER_UNIQUE_ID, MQTT_TOPICS, MQTT_TOPIC_COUNT);
+String* fullTopics;
 
 void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
 {
@@ -110,6 +112,8 @@ void setup()
   loadSupabase(SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_USERNAME, SUPABASE_PASSWORD);
   Serial.println("Loading MQTT...");
   loadMQTT(MQTT_SERVER, MQTT_PORT, mqttCallback);
+
+  fullTopics = addPrefixToTopics(fmt::format("{}/", WROVER_UNIQUE_ID).c_str(), MQTT_TOPICS, MQTT_TOPIC_COUNT);
 
   Serial.println("------------------");
   Serial.print("Unique ID: ");
