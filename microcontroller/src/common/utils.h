@@ -3,8 +3,6 @@
 
 #include <ArduinoJson.h>
 
-using namespace std;
-
 /**
  * Generates an MD5 hash from the input string.
  *
