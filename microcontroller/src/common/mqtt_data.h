@@ -3,6 +3,13 @@
 
 #include <ArduinoJson.h>
 
+enum FingerprintDataType : int
+{
+  FINGERPRINT_REGISTRATION = 0,
+  FINGERPRINT_UPDATE = 1,
+  FINGERPRINT_TOUCH = 2
+};
+
 struct BuzzerData
 {
 private:
@@ -31,24 +38,15 @@ struct OledData
 {
   static constexpr const char *TOPIC = "sensor/oled";
 
-  char *message;
+  const char *message;
   bool isQrCode;
 
-  OledData(char *m, bool q) : message(m), isQrCode(q) {}
-
-  ~OledData()
-  {
-    delete[] message;
-  }
+  OledData(const char *m, bool q) : message(m), isQrCode(q) {}
 
   static OledData fromJson(const JsonDocument &doc)
   {
-    const char *msg = doc["message"] | "";
-    char *allocatedMessage = new char[strlen(msg) + 1];
-    strcpy(allocatedMessage, msg);
-
     return {
-        allocatedMessage,
+        doc["message"] | "",
         doc["isQrCode"] | false};
   }
 
@@ -59,32 +57,49 @@ struct OledData
   }
 };
 
-struct FingerprintData
+struct UltrasonicData
 {
-  static constexpr const char *TOPIC = "sensor/fingerprint";
+  static constexpr const char *TOPIC = "sensor/ultrasonic";
 
-  char *userId;
+  bool isClose;
 
-  FingerprintData(char *i) : userId(i) {}
+  UltrasonicData(bool c) : isClose(c) {}
 
-  ~FingerprintData()
+  static UltrasonicData fromJson(const JsonDocument &doc)
   {
-    delete[] userId;
-  }
-
-  static FingerprintData fromJson(const JsonDocument &doc)
-  {
-    const char *userId = doc["userId"] | "";
-    char *allocatedUserId = new char[strlen(userId) + 1];
-    strcpy(allocatedUserId, userId);
-
     return {
-        allocatedUserId};
+        doc["isClose"] | false};
   }
 
   void toJson(JsonDocument &doc) const
   {
+    doc["isClose"] = isClose;
+  }
+};
+
+struct FingerprintData
+{
+  static constexpr const char *TOPIC = "sensor/fingerprint";
+
+  FingerprintDataType type;
+  const char *userId;
+  bool isNew;
+
+  FingerprintData(FingerprintDataType t, const char *i = "", bool n = false) : type(t), userId(i), isNew(n) {}
+
+  static FingerprintData fromJson(const JsonDocument &doc)
+  {
+    return {
+        static_cast<FingerprintDataType>(doc["type"] | 0),
+        doc["userId"] | "",
+        doc["isNew"] | false};
+  }
+
+  void toJson(JsonDocument &doc) const
+  {
+    doc["type"] = type;
     doc["userId"] = userId;
+    doc["isNew"] = isNew;
   }
 };
 

@@ -1,15 +1,21 @@
 #include <HardwareSerial.h>
+#include <ArduinoJson.h>
 #include <common/wifi.h>
-#include <common/esp_now.h>
 #include <common/env/env.h>
-#include <common/esp_now_data.h>
+#include <common/utils.h>
+#include <common/mqtt.h>
+#include <common/mqtt_data.h>
 #include <common/oled.h>
 #include <common/fingerprint.h>
 #include <unordered_map>
 
 using namespace std;
 
-EspNowReceiver espNowReceiver(WROVER_MAC_ADDRESS);
+String MQTT_TOPICS[] = {
+    OledData::TOPIC,
+    FingerprintData::TOPIC};
+const size_t MQTT_TOPIC_COUNT = sizeof(MQTT_TOPICS) / sizeof(MQTT_TOPICS[0]);
+String *fullTopics = addPrefixToTopics(WROVER_UNIQUE_ID, MQTT_TOPICS, MQTT_TOPIC_COUNT);
 
 std::unordered_map<int, string> fingerprintUserIds;
 
@@ -35,17 +41,22 @@ void fingerprintCallback(FingerprintStage stage, FingerprintError error)
   }
 }
 
-void espNowCallback(const uint8_t *mac, const uint8_t *data, int len)
+void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
 {
-  uint8_t dataType = data[0];
+  JsonDocument doc;
+  deserializeJson(doc, payload, length);
 
-  switch (dataType)
+  string topicPrefix = string(WROVER_UNIQUE_ID) + "/";
+  size_t topicPrefixLen = strlen(topicPrefix.c_str());
+  if (strncmp(topic, topicPrefix.c_str(), topicPrefixLen) != 0)
   {
-  case ESP_NOW_OLED_DATA_TYPE:
-  {
-    EspNowOledData oledData;
-    memcpy(&oledData, data, sizeof(EspNowOledData));
+    return;
+  }
+  topic += topicPrefixLen;
 
+  if (strcmp(topic, OledData::TOPIC) == 0)
+  {
+    OledData oledData = OledData::fromJson(doc);
     if (oledData.isQrCode)
     {
       displayQRCode(oledData.message);
@@ -54,29 +65,30 @@ void espNowCallback(const uint8_t *mac, const uint8_t *data, int len)
     {
       displayText(oledData.message);
     }
-    break;
   }
-  case ESP_NOW_FINGERPRINT_REGISTRATION_DATA_TYPE:
+  else if (strcmp(topic, FingerprintData::TOPIC) == 0)
   {
-    EspNowFingerprintRegistrationData fingerprintRegistrationData;
-    memcpy(&fingerprintRegistrationData, data, sizeof(EspNowFingerprintRegistrationData));
-
-    uint16_t id = registerFingerprint(fingerprintCallback);
-
-    if (id > 0)
+    FingerprintData fingerprintData = FingerprintData::fromJson(doc);
+    switch (fingerprintData.type)
     {
-      bool isNew = fingerprintUserIds.count(id) == 0;
-      char *allocatedUserId = new char[strlen(fingerprintRegistrationData.userId) + 1];
-      strcpy(allocatedUserId, fingerprintRegistrationData.userId);
-      fingerprintUserIds[id] = string(allocatedUserId);
+    case FINGERPRINT_REGISTRATION:
+      uint16_t id = registerFingerprint(fingerprintCallback);
 
-      EspNowFingerprintUpdateData espNowData;
-      espNowData.isNew = isNew;
-      strcpy(espNowData.userId, fingerprintRegistrationData.userId);
-      espNowReceiver.send((uint8_t *)&espNowData, sizeof(EspNowFingerprintUpdateData));
+      if (id > 0)
+      {
+        bool isNew = fingerprintUserIds.count(id) == 0;
+        char allocatedUserId[strlen(fingerprintData.userId) + 1];
+        strcpy(allocatedUserId, fingerprintData.userId);
+        fingerprintUserIds[id] = string(allocatedUserId);
+
+        FingerprintData newFingerprintData = {FINGERPRINT_REGISTRATION, fingerprintData.userId, isNew};
+
+        uint8_t buffer[sizeof(FingerprintData)];
+        memcpy(buffer, &newFingerprintData, sizeof(FingerprintData));
+        publishMQTT(string(WROVER_UNIQUE_ID + string("/") + topic).c_str(), buffer, sizeof(FingerprintData));
+      }
+      break;
     }
-    break;
-  }
   }
 }
 
@@ -84,31 +96,35 @@ void setup()
 {
   Serial.begin(9600);
 
+  Serial.println("Healing...");
+  delay(2000);
+
+  Serial.println("Loading WiFi...");
   connectWifi(WIFI_SSID, WIFI_PASSWORD);
+  Serial.println("Loading timestamp...");
+  configTimestamp();
   Serial.println("Loading OLED...");
   loadOLED();
   Serial.println("Loading fingerprint...");
   loadFingerprint();
-  Serial.println("Loading ESP-NOW...");
-  loadEspNow(espNowCallback);
+  Serial.println("Loading MQTT...");
+  loadMQTT(MQTT_SERVER, MQTT_PORT, mqttCallback);
 
   Serial.println("------------------");
+  Serial.print("Unique ID: ");
+  Serial.println(WROOM_UNIQUE_ID);
   Serial.print("MAC address: ");
   Serial.println(WiFi.macAddress());
   Serial.println("------------------");
 
-  Serial.println("Loading ESP-NOW receiver...");
-  delay(2000);
-  espNowReceiver.load();
-
   Serial.println("Ready!");
   displayText("Ready!", 2000);
-
-  registerFingerprint(fingerprintCallback);
 }
 
 void loop()
 {
+  loopMQTT(MQTT_USERNAME, MQTT_PASSWORD, fullTopics, MQTT_TOPIC_COUNT);
+
   if (!isFingerprintRegistering)
   {
     uint16_t id = scanFingerprint();
@@ -116,10 +132,11 @@ void loop()
     {
       string fingerprintUserId = fingerprintUserIds[id];
 
-      EspNowFingerprintTouchData fingerprintTouchData;
-      strcpy(fingerprintTouchData.userId, fingerprintUserId.c_str());
+      FingerprintData newFingerprintData = {FINGERPRINT_REGISTRATION, fingerprintUserId.c_str()};
 
-      espNowReceiver.send((uint8_t *)&fingerprintTouchData, sizeof(EspNowFingerprintTouchData));
+      uint8_t buffer[sizeof(FingerprintData)];
+      memcpy(buffer, &newFingerprintData, sizeof(FingerprintData));
+      publishMQTT(string(WROVER_UNIQUE_ID + string("/sensor/fingerprint")).c_str(), buffer, sizeof(FingerprintData));
 
       displayText(string("Welcome, " + fingerprintUserId).c_str(), 2000);
     }
