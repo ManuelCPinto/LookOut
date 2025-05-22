@@ -24,7 +24,7 @@ typedef struct
 typedef struct
 {
   uint8_t msgType = ESP_NOW_OLED_DATA_TYPE;
-  char message[64];
+  char message[32];
   bool isQrCode;
 } EspNowOledData;
 

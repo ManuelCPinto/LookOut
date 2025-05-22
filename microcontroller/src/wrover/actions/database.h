@@ -7,7 +7,8 @@ enum LogType
 {
   USER_REQUEST,
   PROXIMITY,
-  RING_DOORBELL
+  RING_DOORBELL,
+  NEW_FINGERPRINT
 };
 
 struct LogData
@@ -16,10 +17,10 @@ struct LogData
 
   enum LogType type;
   int createdAt;
-  String photoURL;
-  String userId;
+  const char* photoURL;
+  const char* userId;
 
-  LogData(LogType t, int c, String p, String u = "") : type(t), createdAt(c), photoURL(p), userId(u) {}
+  LogData(LogType t, int c = time(NULL), const char* p = "", const char* u = "") : type(t), createdAt(c), photoURL(p), userId(u) {}
 
   static LogData fromJson(FirebaseJson &json)
   {
@@ -37,16 +38,16 @@ struct LogData
       createdAt = result.intValue;
     }
 
-    String photoURL;
+    char* photoURL;
     if (json.get(result, "photoURL") && result.success)
     {
-      photoURL = result.stringValue;
+      strcpy(photoURL, result.stringValue.c_str());
     }
 
-    String userId;
+    char* userId;
     if (json.get(result, "userId") && result.success)
     {
-      userId = result.stringValue;
+      strcpy(userId, result.stringValue.c_str());
     }
 
     return {type, createdAt, photoURL, userId};

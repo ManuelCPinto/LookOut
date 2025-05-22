@@ -5,8 +5,8 @@
  * Generates an MD5 hash from the input string.
  *
  * @param input The input string to hash.
- * @return The MD5 hash as a string.
+ * @param output The output string to insert the hash.
  */
-const char *hashMD5(const char *input);
+void hashMD5(const char *input, char *output);
 
 #endif
