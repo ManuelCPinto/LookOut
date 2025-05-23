@@ -39,7 +39,7 @@ void takePhotoToSupabase(const char *bucket, const char *folderName, function<vo
 
 void addFingerprintUserToFirebase(const char *nodeId, const char *userId)
 {
-  Firebase.RTDB.setBoolAsync(&fbdo, fmt::format("/devices/{}/users/{}", nodeId, userId), true);
+  Firebase.RTDB.setInt(&fbdo, fmt::format("/devices/{}/users/{}", nodeId, userId), time(NULL));
 }
 
 void logToFirebase(const char *nodeId, LogData logData)
