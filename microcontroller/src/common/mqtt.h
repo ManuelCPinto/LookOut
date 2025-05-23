@@ -15,12 +15,13 @@ void loadMQTT(const char *mqttServer, int mqttPort, void (*callback)(char *topic
 /**
  * Loops the MQTT client (REQUIRED IN THE LOOP).
  *
+ * @param mqttClientId A unique MQTT client ID.
  * @param mqttUsername The MQTT username.
  * @param mqttPassword The MQTT password.
  * @param mqttTopics The MQTT topics to subscribe to.
  * @param topicCount The number of topics to subscribe to.
  */
-void loopMQTT(const char *mqttUsername, const char *mqttPassword, String mqttTopics[], int topicCount);
+void loopMQTT(const char *mqttClientId, const char *mqttUsername, const char *mqttPassword, String mqttTopics[], int topicCount);
 
 /**
  * Publish a message to MQTT.

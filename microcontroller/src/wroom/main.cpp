@@ -85,9 +85,12 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
 
         FingerprintData newFingerprintData = {FINGERPRINT_REGISTRATION, fingerprintData.userId, isNew};
 
-        uint8_t buffer[sizeof(FingerprintData)];
-        memcpy(buffer, &newFingerprintData, sizeof(FingerprintData));
-        publishMQTT(string(WROVER_UNIQUE_ID + string("/") + topic).c_str(), buffer, sizeof(FingerprintData));
+        JsonDocument json;
+        newFingerprintData.toJson(json);
+        uint8_t jsonBuffer[256];
+        size_t jsonLen = serializeJson(json, jsonBuffer);
+
+        publishMQTT(string(WROVER_UNIQUE_ID + string("/") + topic).c_str(), jsonBuffer, jsonLen);
       }
       break;
     }
@@ -127,7 +130,7 @@ void setup()
 
 void loop()
 {
-  loopMQTT(MQTT_USERNAME, MQTT_PASSWORD, fullTopics, MQTT_TOPIC_COUNT);
+  loopMQTT(WROOM_UNIQUE_ID, MQTT_USERNAME, MQTT_PASSWORD, fullTopics, MQTT_TOPIC_COUNT);
 
   if (!isFingerprintRegistering)
   {
@@ -138,9 +141,12 @@ void loop()
 
       FingerprintData newFingerprintData = {FINGERPRINT_REGISTRATION, fingerprintUserId.c_str()};
 
-      uint8_t buffer[sizeof(FingerprintData)];
-      memcpy(buffer, &newFingerprintData, sizeof(FingerprintData));
-      publishMQTT(string(WROVER_UNIQUE_ID + string("/sensor/fingerprint")).c_str(), buffer, sizeof(FingerprintData));
+      JsonDocument json;
+      newFingerprintData.toJson(json);
+      uint8_t jsonBuffer[256];
+      size_t jsonLen = serializeJson(json, jsonBuffer);
+
+      publishMQTT(string(WROVER_UNIQUE_ID + string("/sensor/fingerprint")).c_str(), jsonBuffer, jsonLen);
 
       displayText(string("Welcome, " + fingerprintUserId).c_str(), 2000);
     }

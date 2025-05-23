@@ -11,11 +11,11 @@ void loadMQTT(const char *mqttServer, int mqttPort, void (*callback)(char *topic
   client.setCallback(callback);
 }
 
-void loopMQTT(const char *mqttUsername, const char *mqttPassword, String mqttTopics[], int topicCount)
+void loopMQTT(const char *mqttClientId, const char *mqttUsername, const char *mqttPassword, String mqttTopics[], int topicCount)
 {
   while (!client.connected())
   {
-    if (client.connect("ESP32Client", mqttUsername, mqttPassword))
+    if (client.connect(mqttClientId, mqttUsername, mqttPassword))
     {
       for (int i = 0; i < topicCount; i++)
       {

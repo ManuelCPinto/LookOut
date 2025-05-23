@@ -24,7 +24,7 @@ String MQTT_TOPICS[] = {
     TAKE_PHOTO_TOPIC,
     OledData::TOPIC};
 const size_t MQTT_TOPIC_COUNT = sizeof(MQTT_TOPICS) / sizeof(MQTT_TOPICS[0]);
-String* fullTopics;
+String *fullTopics;
 
 void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
 {
@@ -76,7 +76,6 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
       publishMQTT(string(WROOM_UNIQUE_ID + string("/") + topic).c_str(), payload, length);
       break;
     }
-    publishMQTT(string(WROOM_UNIQUE_ID + string("/") + topic).c_str(), payload, length);
   }
   else if (strcmp(topic, TAKE_PHOTO_TOPIC) == 0)
   {
@@ -127,5 +126,5 @@ void setup()
 
 void loop()
 {
-  loopMQTT(MQTT_USERNAME, MQTT_PASSWORD, fullTopics, MQTT_TOPIC_COUNT);
+  loopMQTT(WROVER_UNIQUE_ID, MQTT_USERNAME, MQTT_PASSWORD, fullTopics, MQTT_TOPIC_COUNT);
 }
