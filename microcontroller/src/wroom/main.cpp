@@ -83,7 +83,7 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
         strcpy(allocatedUserId, fingerprintData.userId);
         fingerprintUserIds[id] = string(allocatedUserId);
 
-        FingerprintData newFingerprintData = {FINGERPRINT_REGISTRATION, fingerprintData.userId, isNew};
+        FingerprintData newFingerprintData = {FINGERPRINT_UPDATE, fingerprintData.userId, isNew};
 
         JsonDocument json;
         newFingerprintData.toJson(json);
@@ -139,7 +139,7 @@ void loop()
     {
       string fingerprintUserId = fingerprintUserIds[id];
 
-      FingerprintData newFingerprintData = {FINGERPRINT_REGISTRATION, fingerprintUserId.c_str()};
+      FingerprintData newFingerprintData = {FINGERPRINT_TOUCH, fingerprintUserId.c_str()};
 
       JsonDocument json;
       newFingerprintData.toJson(json);
