@@ -58,6 +58,7 @@ struct LogData
     json.set("type", (int)type);
     json.set("createdAt", createdAt);
     json.set("photoURL", photoURL);
+    json.set("userId", userId);
   }
 };
 

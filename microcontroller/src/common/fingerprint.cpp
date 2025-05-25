@@ -129,21 +129,21 @@ uint16_t registerFingerprint(void (*callback)(FingerprintStage stage, Fingerprin
   return id;
 }
 
-uint16_t scanFingerprint()
+int16_t scanFingerprint()
 {
   if (isFingerprintRegistering)
-    return 0;
+    return -1;
 
   int p = finger.getImage();
   if (p != FINGERPRINT_OK)
   {
-    return 0;
+    return -1;
   }
 
   p = finger.image2Tz();
   if (p != FINGERPRINT_OK)
   {
-    return 0;
+    return -1;
   }
 
   p = finger.fingerFastSearch();

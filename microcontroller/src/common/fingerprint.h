@@ -55,6 +55,6 @@ uint16_t registerFingerprint(void (*callback)(FingerprintStage stage, Fingerprin
  *
  * @return The fingerprint ID if valid (1-64 for AS608).
  */
-uint16_t scanFingerprint();
+int16_t scanFingerprint();
 
 #endif

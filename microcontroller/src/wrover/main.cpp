@@ -69,8 +69,9 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
     case FINGERPRINT_TOUCH:
       takePhotoToSupabase(SUPABASE_BUCKET, WROVER_UNIQUE_ID, [=](string photoURL, time_t timestamp)
                           {
-      LogData logData = {RING_DOORBELL, timestamp, photoURL.c_str(), fingerprintData.userId};
-      logToFirebase(WROVER_UNIQUE_ID, logData); });
+        beep(BUZZER_PIN, 2000);
+        LogData logData = {RING_DOORBELL, timestamp, photoURL.c_str(), fingerprintData.userId};
+        logToFirebase(WROVER_UNIQUE_ID, logData); });
       break;
     case FINGERPRINT_REGISTRATION:
       publishMQTT(string(WROOM_UNIQUE_ID + string("/") + topic).c_str(), payload, length);

@@ -134,8 +134,8 @@ void loop()
 
   if (!isFingerprintRegistering)
   {
-    uint16_t id = scanFingerprint();
-    if (id > 0)
+    int16_t id = scanFingerprint();
+    if (id >= 0)
     {
       string fingerprintUserId = fingerprintUserIds[id];
 
@@ -148,7 +148,7 @@ void loop()
 
       publishMQTT(string(WROVER_UNIQUE_ID + string("/sensor/fingerprint")).c_str(), jsonBuffer, jsonLen);
 
-      displayText(string("Welcome, " + fingerprintUserId).c_str(), 2000);
+      displayText(fingerprintUserId == "" ? "Hello!" : string("Hello, " + fingerprintUserId + "!").c_str(), 2000);
     }
 
     delay(2000);
