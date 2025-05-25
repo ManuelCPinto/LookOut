@@ -1,6 +1,7 @@
 #include <Adafruit_SSD1306.h>
 #include <QRCodeGFX.h>
 #include <Wire.h>
+#include <Ticker.h>
 
 // Configuration for our OLED
 #define SCREEN_WIDTH 128
@@ -13,12 +14,18 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, RESET_PIN);
 QRCodeGFX qrcode(display);
 
-long currentId = 0;
+Ticker displayTimeoutTimer;
 
 bool loadOLED()
 {
   Wire.begin(SDA_PIN, SCL_PIN);
   return display.begin(SSD1306_SWITCHCAPVCC, I2C_ADDRESS);
+}
+
+void clearDisplay()
+{
+  display.clearDisplay();
+  display.display();
 }
 
 void displayText(const char *text, int duration = 0)
@@ -30,19 +37,16 @@ void displayText(const char *text, int duration = 0)
   display.setCursor(0, 0);
   display.println(text);
 
+  displayTimeoutTimer.detach();
   display.display();
 
-  if (duration > 0) {
-    long id = ++currentId;
-    delay(duration);
-    if (id == currentId) {
-      display.clearDisplay();
-      display.display();
-    }
+  if (duration > 0)
+  {
+    displayTimeoutTimer.once_ms(duration, clearDisplay);
   }
 }
 
-void displayQRCode(const char *msg)
+void displayQRCode(const char *msg, int duration = 0)
 {
   display.clearDisplay();
 
@@ -50,5 +54,11 @@ void displayQRCode(const char *msg)
   qrcode.generateData(msg);
   qrcode.draw(0, 0, false);
 
+  displayTimeoutTimer.detach();
   display.display();
+
+  if (duration > 0)
+  {
+    displayTimeoutTimer.once_ms(duration, clearDisplay);
+  }
 }

@@ -11,8 +11,10 @@ extern FirebaseConfig config;
  *
  * @param apiKey Firebase API key.
  * @param databaseURL Firebase Realtime Database URL.
+ * @param email Firebase's account email.
+ * @param password Firebase's account password.
  * @return Whether loaded successfully.
  */
-bool loadFirebase(const char *apiKey, const char *databaseURL);
+bool loadFirebase(const char *apiKey, const char *databaseURL, const char *email = "", const char *password = "");
 
 #endif

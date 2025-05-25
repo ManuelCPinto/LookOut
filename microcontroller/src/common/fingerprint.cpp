@@ -81,7 +81,7 @@ uint16_t registerFingerprint2(void (*callback)(FingerprintStage stage, Fingerpri
   }
 
   callback(FINGERPRINT_REMOVE_FINGER_STAGE, FINGERPRINT_NO_ERROR);
-  delay(2000);
+  delay(1000);
   while (finger.getImage() != FINGERPRINT_NOFINGER)
   {
     delay(100);
@@ -115,6 +115,7 @@ uint16_t registerFingerprint2(void (*callback)(FingerprintStage stage, Fingerpri
   }
 
   callback(FINGERPRINT_FINISHED_STAGE, FINGERPRINT_NO_ERROR);
+  delay(2000);
   return id;
 }
 

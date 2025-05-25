@@ -15,8 +15,6 @@
 
 using namespace std;
 
-const int BUZZER_PIN = 15;
-
 String MQTT_TOPICS[] = {
     BuzzerData::TOPIC,
     UltrasonicData::TOPIC,
@@ -42,7 +40,7 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
   if (strcmp(topic, BuzzerData::TOPIC) == 0)
   {
     BuzzerData buzzerData = BuzzerData::fromJson(doc);
-    beep(BUZZER_PIN, buzzerData.duration);
+    beep(buzzerData.duration);
   }
   else if (strcmp(topic, UltrasonicData::TOPIC) == 0)
   {
@@ -67,9 +65,9 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
       }
       break;
     case FINGERPRINT_TOUCH:
+      beep(2000);
       takePhotoToSupabase(SUPABASE_BUCKET, WROVER_UNIQUE_ID, [=](string photoURL, time_t timestamp)
                           {
-        beep(BUZZER_PIN, 2000);
         LogData logData = {RING_DOORBELL, timestamp, photoURL.c_str(), fingerprintData.userId};
         logToFirebase(WROVER_UNIQUE_ID, logData); });
       break;
@@ -95,9 +93,6 @@ void setup()
 {
   Serial.begin(9600);
 
-  Serial.println("Healing...");
-  delay(2000);
-
   pinMode(BUZZER_PIN, OUTPUT);
 
   Serial.println("Loading WiFi...");
@@ -107,7 +102,7 @@ void setup()
   Serial.println("Loading camera...");
   loadCamera();
   Serial.println("Loading Firebase...");
-  loadFirebase(FIREBASE_API_KEY, FIREBASE_DATABASE_URL);
+  loadFirebase(FIREBASE_API_KEY, FIREBASE_DATABASE_URL, FIREBASE_EMAIL, FIREBASE_PASSWORD);
   Serial.println("Loading Supabase...");
   loadSupabase(SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_USERNAME, SUPABASE_PASSWORD);
   Serial.println("Loading MQTT...");

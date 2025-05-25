@@ -5,22 +5,27 @@
 #include <Firebase_ESP_Client.h>
 #undef B1
 #include <fmt/core.h>
+#include <Ticker.h>
 #include "database.h"
+#include "hardware.h"
 
 using namespace std;
 
 const string SUPABASE_PUBLIC_STORAGE_URL_TEMPLATE = "{}/storage/v1/object/public/{}/{}";
 
+Ticker buzzerTimeoutTimer;
+
 FirebaseData fbdo;
 
-void beep(uint8_t pin, uint32_t duration)
+void beep(uint32_t duration)
 {
-  digitalWrite(pin, HIGH);
-  delay(duration);
-  digitalWrite(pin, LOW);
+  digitalWrite(BUZZER_PIN, HIGH);
+  buzzerTimeoutTimer.once_ms(duration, []() {
+    digitalWrite(BUZZER_PIN, LOW);
+  });
 }
 
-void takePhotoToSupabase(const char *bucket, const char *folderName, function<void(string photoURL, time_t timestamp)> callback = nullptr)
+void takePhotoToSupabase(const char *bucket, const char *folderName, function<void(string photoURL, time_t timestamp)> callback)
 {
   camera_fb_t *fb = takePhoto();
 

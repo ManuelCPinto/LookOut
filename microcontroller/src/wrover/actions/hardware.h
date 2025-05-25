@@ -5,13 +5,14 @@
 
 using namespace std;
 
+static const int BUZZER_PIN = 15;
+
 /**
  * Beeps the buzzer connected to the specified pin for the given duration.
  *
- * @param pin The GPIO pin number where the buzzer is connected.
  * @param duration The duration in milliseconds for which the buzzer should beep.
  */
-void beep(uint8_t pin, uint32_t duration);
+void beep(uint32_t duration);
 
 /**
  * Takes a photo and uploads it to Supabase.
@@ -20,7 +21,7 @@ void beep(uint8_t pin, uint32_t duration);
  * @param folderName The name of the folder in Supabase where the photo will be uploaded.
  * @param callback The callback function to be called when photo is send.
  */
-void takePhotoToSupabase(const char *bucket, const char *folderName, function<void(string photoURL, time_t timestamp)> callback = nullptr);
+void takePhotoToSupabase(const char *bucket, const char *folderName, function<void(string photoURL, time_t timestamp)> callback);
 
 /**
  * Adds a fingerprint user to Firebase.

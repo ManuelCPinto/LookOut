@@ -10,6 +10,7 @@
 #include <unordered_map>
 #undef B1
 #include <fmt/core.h>
+#include <Ticker.h>
 
 using namespace std;
 
@@ -20,6 +21,8 @@ const size_t MQTT_TOPIC_COUNT = sizeof(MQTT_TOPICS) / sizeof(MQTT_TOPICS[0]);
 String *fullTopics;
 
 std::unordered_map<int, string> fingerprintUserIds;
+
+Ticker fingerprintIntervalTimer;
 
 void fingerprintCallback(FingerprintStage stage, FingerprintError error)
 {
@@ -97,12 +100,31 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
   }
 }
 
+void loopScanFingerprint() {
+  if (!isFingerprintRegistering)
+  {
+    int16_t id = scanFingerprint();
+    if (id >= 0)
+    {
+      string fingerprintUserId = fingerprintUserIds[id];
+
+      FingerprintData newFingerprintData = {FINGERPRINT_TOUCH, fingerprintUserId.c_str()};
+
+      JsonDocument json;
+      newFingerprintData.toJson(json);
+      uint8_t jsonBuffer[256];
+      size_t jsonLen = serializeJson(json, jsonBuffer);
+
+      publishMQTT(string(WROVER_UNIQUE_ID + string("/sensor/fingerprint")).c_str(), jsonBuffer, jsonLen);
+
+      displayText(fingerprintUserId == "" ? "Hello!" : string("Hello, " + fingerprintUserId + "!").c_str(), 2000);
+    }
+  }
+}
+
 void setup()
 {
   Serial.begin(9600);
-
-  Serial.println("Healing...");
-  delay(2000);
 
   Serial.println("Loading WiFi...");
   connectWifi(WIFI_SSID, WIFI_PASSWORD);
@@ -126,31 +148,11 @@ void setup()
 
   Serial.println("Ready!");
   displayText("Ready!", 2000);
+
+  fingerprintIntervalTimer.attach_ms(2000, loopScanFingerprint);
 }
 
 void loop()
 {
   loopMQTT(WROOM_UNIQUE_ID, MQTT_USERNAME, MQTT_PASSWORD, fullTopics, MQTT_TOPIC_COUNT);
-
-  if (!isFingerprintRegistering)
-  {
-    int16_t id = scanFingerprint();
-    if (id >= 0)
-    {
-      string fingerprintUserId = fingerprintUserIds[id];
-
-      FingerprintData newFingerprintData = {FINGERPRINT_TOUCH, fingerprintUserId.c_str()};
-
-      JsonDocument json;
-      newFingerprintData.toJson(json);
-      uint8_t jsonBuffer[256];
-      size_t jsonLen = serializeJson(json, jsonBuffer);
-
-      publishMQTT(string(WROVER_UNIQUE_ID + string("/sensor/fingerprint")).c_str(), jsonBuffer, jsonLen);
-
-      displayText(fingerprintUserId == "" ? "Hello!" : string("Hello, " + fingerprintUserId + "!").c_str(), 2000);
-    }
-
-    delay(2000);
-  }
 }
