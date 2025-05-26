@@ -18,8 +18,11 @@ import {
   useDeviceStats,
   useDeviceModal,
   useRenameDevice,
+  useRegistrationFlow,
 } from "@/hooks/devices";
 import { useRouter } from "expo-router";
+import { auth } from "@/lib/firebase";
+import { useMqttPublish } from "@/hooks/common";
 
 type Props = {
   device: Device;
@@ -55,13 +58,12 @@ export default function DeviceDetailModal({ device, visible, onClose }: Props) {
           left: 0,
           right: 0,
           top: 32,
-          bottom: 0, 
+          bottom: 0,
           shadowColor: "#000",
           shadowOffset: { width: 0, height: -2 },
           shadowOpacity: 0.2,
           shadowRadius: 8,
           elevation: 10,
-        
         }}
       >
         <SheetContent device={device} onClose={handleClose} />
@@ -84,11 +86,28 @@ const SheetContent = memo(function SheetContent({
 
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(device.name);
+  const uid = auth.currentUser!.uid;
+  const { publish } = useMqttPublish();
+  const { checkOnce, startPolling, stopPolling, isRegistered, loading } =
+    useRegistrationFlow(device.id, uid!);
+
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [successVisible, setSuccessVisible] = useState(false);
 
   useEffect(() => {
     setDraftName(device.name);
   }, [device.name]);
 
+  useEffect(() => {
+    if (!successVisible) return;
+
+    const timer = setTimeout(() => {
+      setSuccessVisible(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [successVisible]);
   const handleSave = useCallback(async () => {
     await rename(device.id, draftName);
     setEditing(false);
@@ -97,6 +116,40 @@ const SheetContent = memo(function SheetContent({
   const handleHistory = useCallback(() => {
     router.push({ pathname: "/logs", params: { deviceId: device.id } });
   }, [device.id, router]);
+
+  const handleRegisterFingerprint = useCallback(() => {
+    if (!uid) return;
+    publish(`${device.id}/sensor/fingerprint`, {
+      type: "FINGERPRINT_REGISTRATION",
+      userId: uid,
+      isNew: false,
+    });
+  }, [device.id, publish, uid]);
+
+  const onPressFingerprint = useCallback(() => {
+    setConfirmVisible(true);
+  }, []);
+
+  const onConfirm = useCallback(async () => {
+    setConfirmVisible(false);  
+    handleRegisterFingerprint();
+      const already = await checkOnce();
+    if (already) {
+      setErrorVisible(true);
+    } else {
+      startPolling();
+    }
+  }, [
+    handleRegisterFingerprint, 
+    checkOnce, 
+    startPolling
+  ]);
+
+  useEffect(() => {
+    if (isRegistered) {
+      setSuccessVisible(true);
+    }
+  }, [isRegistered]);
 
   const h = Math.floor(uptime / 3600);
   const m = Math.floor((uptime % 3600) / 60);
@@ -108,25 +161,99 @@ const SheetContent = memo(function SheetContent({
         <View className="w-12 h-1 bg-gray-300 rounded-full" />
       </Pressable>
 
+      {/* Confirmation Modal */}
+      <RNModal isVisible={confirmVisible}>
+        <View className="p-6 bg-white rounded-lg">
+          <Pressable onPress={() => setConfirmVisible(false)} className="mb-4">
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </Pressable>
+          <Text className="mb-4 text-lg font-semibold">
+            Register fingerprint for this device?
+          </Text>
+          <View className="flex-row justify-end">
+            <Pressable
+              onPress={() => setConfirmVisible(false)}
+              className="px-4 py-2 mr-2"
+            >
+              <Text>Cancel</Text>
+            </Pressable>
+            <Pressable
+              onPress={onConfirm}
+              className="px-4 py-2 bg-blue-600 rounded"
+            >
+              <Text className="text-white">Yes</Text>
+            </Pressable>
+          </View>
+        </View>
+      </RNModal>
+
+      {/* Error Modal */}
+      <RNModal isVisible={errorVisible}>
+        <View className="p-6 bg-white rounded-lg">
+          <Pressable onPress={() => setErrorVisible(false)} className="mb-4">
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </Pressable>
+          <Text className="font-semibold text-red-600">
+            You are already registered on this device.
+          </Text>
+        </View>
+      </RNModal>
+
+      {/* Loading (polling) Modal */}
+      <RNModal isVisible={loading}>
+        <View className="items-center p-6 bg-white rounded-lg">
+          <Pressable onPress={stopPolling} className="self-start mb-4">
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </Pressable>
+          <ActivityIndicator size="large" color="#4F46E5" />
+          <Text className="mt-4">Waiting for fingerprint enrollment…</Text>
+        </View>
+      </RNModal>
+
+      {/* Success Modal */}
+      <RNModal isVisible={successVisible}>
+        <View className="items-center p-6 bg-white rounded-lg">
+          <Pressable
+            onPress={() => setSuccessVisible(false)}
+            className="self-start mb-4"
+          >
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </Pressable>
+          <Ionicons name="checkmark-circle-outline" size={80} color="#10B981" />
+          <Text className="mt-4 font-semibold">Enrollment successful!</Text>
+        </View>
+      </RNModal>
+
       <ScrollView
         contentContainerStyle={{ paddingBottom: 24 }}
         keyboardShouldPersistTaps="handled"
       >
         {/* Header */}
-        <View className="flex-row items-center justify-center px-4 py-3">
+        <View className="flex-row items-center justify-between px-4 py-3">
+          {/* Fingerprint button on the left in a box outline */}
+          <Pressable
+            onPress={onPressFingerprint}
+            className="p-2 border border-gray-300 rounded"
+          >
+            <Ionicons name="finger-print-outline" size={20} color="#4B5563" />
+          </Pressable>
+
+          {/* Title or editing input, centered */}
           {editing ? (
             <TextInput
               value={draftName}
               onChangeText={setDraftName}
-              className="flex-1 px-3 py-1 text-xl font-semibold text-center bg-gray-100 rounded-full"
+              className="flex-1 px-3 py-1 mx-4 text-xl font-semibold text-center bg-gray-100 rounded-full"
             />
           ) : (
-            <Text className="mx-4 text-2xl font-bold text-gray-800">
+            <Text className="flex-1 mx-4 text-2xl font-bold text-center text-gray-800">
               {device.name}
             </Text>
           )}
+
+          {/* Right-side: either save/cancel or pencil */}
           {editing ? (
-            <View className="absolute flex-row items-center right-4">
+            <View className="flex-row items-center">
               {renaming ? (
                 <ActivityIndicator color="#4F46E5" />
               ) : (
@@ -139,10 +266,7 @@ const SheetContent = memo(function SheetContent({
               </Pressable>
             </View>
           ) : (
-            <Pressable
-              onPress={() => setEditing(true)}
-              className="absolute p-2 right-4"
-            >
+            <Pressable onPress={() => setEditing(true)}>
               <Ionicons name="create-outline" size={20} color="#4B5563" />
             </Pressable>
           )}

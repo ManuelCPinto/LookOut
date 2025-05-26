@@ -15,6 +15,8 @@
 
 using namespace std;
 
+static char pendingUserId[33] = {0};
+
 String MQTT_TOPICS[] = {
     BuzzerData::TOPIC,
     UltrasonicData::TOPIC,
@@ -55,16 +57,20 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
   }
   else if (strcmp(topic, FingerprintData::TOPIC) == 0)
   {
+    Serial.println("Teste");
     FingerprintData fingerprintData = FingerprintData::fromJson(doc);
+    Serial.printf("Type: %d\n", (int)fingerprintData.type);
     switch (fingerprintData.type)
     {
     case FINGERPRINT_UPDATE:
+      Serial.printf("UPDATE");
       if (fingerprintData.isNew)
       {
         addFingerprintUserToFirebase(WROVER_UNIQUE_ID, fingerprintData.userId);
       }
       break;
     case FINGERPRINT_TOUCH:
+      Serial.printf("TOUCH");
       beep(2000);
       takePhotoToSupabase(SUPABASE_BUCKET, WROVER_UNIQUE_ID, [=](string photoURL, time_t timestamp)
                           {
@@ -72,6 +78,7 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
         logToFirebase(WROVER_UNIQUE_ID, logData); });
       break;
     case FINGERPRINT_REGISTRATION:
+      Serial.printf("REGISTRATION");
       publishMQTT(string(WROOM_UNIQUE_ID + string("/") + topic).c_str(), payload, length);
       break;
     }
@@ -102,9 +109,9 @@ void setup()
   Serial.println("Loading camera...");
   loadCamera();
   Serial.println("Loading Firebase...");
-  loadFirebase(FIREBASE_API_KEY, FIREBASE_DATABASE_URL, FIREBASE_EMAIL, FIREBASE_PASSWORD);
-  Serial.println("Loading Supabase...");
-  loadSupabase(SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_USERNAME, SUPABASE_PASSWORD);
+  loadFirebase(FIREBASE_API_KEY);
+  //Serial.println("Loading Supabase...");
+  //loadSupabase(SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_USERNAME, SUPABASE_PASSWORD);
   Serial.println("Loading MQTT...");
   loadMQTT(MQTT_SERVER, MQTT_PORT, mqttCallback);
 

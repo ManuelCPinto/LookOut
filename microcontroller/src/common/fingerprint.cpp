@@ -43,8 +43,7 @@ uint16_t findFreeId(uint16_t maxId = finger.capacity - 1)
 
   for (uint16_t id = 0; id <= maxId; id++)
   {
-    uint16_t id2 = (((current_free_id - 1) + id) % maxId) + 1; // Min: 1, Current: current_free_id + 1, Max: maxId
-
+    uint16_t id2 = (((current_free_id - 1) + id) % maxId) + 1; 
     if (finger.loadModel(id2) != FINGERPRINT_OK)
     {
       current_free_id = id2 + 1;

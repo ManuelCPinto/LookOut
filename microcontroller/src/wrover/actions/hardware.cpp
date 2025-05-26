@@ -15,14 +15,15 @@ const string SUPABASE_PUBLIC_STORAGE_URL_TEMPLATE = "{}/storage/v1/object/public
 
 Ticker buzzerTimeoutTimer;
 
+extern const char *FIREBASE_PROJECT;
+
 FirebaseData fbdo;
 
 void beep(uint32_t duration)
 {
   digitalWrite(BUZZER_PIN, HIGH);
-  buzzerTimeoutTimer.once_ms(duration, []() {
-    digitalWrite(BUZZER_PIN, LOW);
-  });
+  buzzerTimeoutTimer.once_ms(duration, []()
+                             { digitalWrite(BUZZER_PIN, LOW); });
 }
 
 void takePhotoToSupabase(const char *bucket, const char *folderName, function<void(string photoURL, time_t timestamp)> callback)
@@ -44,9 +45,62 @@ void takePhotoToSupabase(const char *bucket, const char *folderName, function<vo
 
 void addFingerprintUserToFirebase(const char *nodeId, const char *userId)
 {
-  Firebase.RTDB.setInt(&fbdo, fmt::format("/devices/{}/users/{}", nodeId, userId), time(NULL));
-}
+  Serial.printf("nodeId: %s | userId: %s\n", nodeId, userId);
 
+  String path = "devices/";
+  path.concat(nodeId);
+  if (!Firebase.Firestore.getDocument(&fbdo, FIREBASE_PROJECT, "", path.c_str()))
+  {
+    Serial.printf("getDocument failed: %s\n", fbdo.errorReason().c_str());
+    return;
+  }
+  if (fbdo.httpCode() != 200)
+  {
+    Serial.printf("HTTP %d on getDocument\n", fbdo.httpCode());
+    return;
+  }
+
+  DynamicJsonDocument inDoc(1024);
+  deserializeJson(inDoc, fbdo.payload());
+  JsonVariant valuesVar = inDoc["fields"]
+                               ["registeredUsers"]
+                               ["arrayValue"]
+                               ["values"];
+  bool hasExisting = valuesVar.is<JsonArray>();
+  JsonArray existing = hasExisting ? valuesVar.as<JsonArray>() : JsonArray();
+
+  String body = "{\"fields\":{";
+  body.concat("\"registeredUsers\":{");
+  body.concat("\"arrayValue\":{");
+  body.concat("\"values\":[");
+  if (hasExisting)
+  {
+    for (JsonObject v : existing)
+    {
+      String prev = v["stringValue"].as<String>();
+      body.concat("{\"stringValue\":\"");
+      body.concat(prev);
+      body.concat("\"},");
+    }
+  }
+
+  body.concat("{\"stringValue\":\"");
+  body.concat(userId);
+  body.concat("\"}");
+  body.concat("]}}}}");
+
+  if (!Firebase.Firestore.patchDocument(
+          &fbdo,
+          FIREBASE_PROJECT,
+          "",
+          path, 
+          body,    
+          "registeredUsers"))
+  {
+    Serial.printf("patchDocument failed: %s\n",
+                  fbdo.errorReason().c_str());
+  }
+}
 void logToFirebase(const char *nodeId, LogData logData)
 {
   FirebaseJson json;

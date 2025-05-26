@@ -73,10 +73,13 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
   }
   else if (strcmp(topic, FingerprintData::TOPIC) == 0)
   {
+    Serial.printf("WROOM");
     FingerprintData fingerprintData = FingerprintData::fromJson(doc);
+    Serial.printf("Type: %d\n", (int)fingerprintData.type);
     switch (fingerprintData.type)
     {
     case FINGERPRINT_REGISTRATION:
+      Serial.printf("WROOM REGISTRATION");
       uint16_t id = registerFingerprint(fingerprintCallback);
 
       if (id > 0)
@@ -92,7 +95,7 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
         newFingerprintData.toJson(json);
         uint8_t jsonBuffer[256];
         size_t jsonLen = serializeJson(json, jsonBuffer);
-
+        Serial.printf("WROOM REGISTRATION END");
         publishMQTT(string(WROVER_UNIQUE_ID + string("/") + topic).c_str(), jsonBuffer, jsonLen);
       }
       break;

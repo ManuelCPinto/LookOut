@@ -1,23 +1,28 @@
 #include <Firebase_ESP_Client.h>
 #include "addons/TokenHelper.h"
-#include "addons/RTDBHelper.h"
-#include "firebase.h"
+#include "firebase.h"  
 
-FirebaseAuth auth;
+FirebaseAuth   auth;
 FirebaseConfig config;
+extern FirebaseData fbdo;   
 
-bool loadFirebase(const char *apiKey, const char *databaseURL, const char *email = "", const char *password = "")
+extern const char* FIREBASE_PROJECT;
+
+bool loadFirebase(const char *apiKey)
 {
   config.api_key = apiKey;
-  config.database_url = databaseURL;
 
-  if (!Firebase.signUp(&config, &auth, email, password))
+  Serial.printf("Firebase API Key: %s\n", apiKey);
+  Serial.printf("Firestore Project : %s\n\n", FIREBASE_PROJECT);
+
+  if (!Firebase.signUp(&config, &auth, "", ""))
   {
+    Serial.printf("Firebase anon sign-up failed: %s\n",
+                  config.signer.signupError.message.c_str());
     return false;
   }
 
   config.token_status_callback = tokenStatusCallback;
-
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
 
