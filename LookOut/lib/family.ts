@@ -30,9 +30,9 @@ export interface Family {
 
 export interface Invite {
   code:      string;    // Document ID (invite code)
-  familyId:  string;    // Family this invite belongs to
+  familyID:  string;    // Family this invite belongs to
   createdAt: Timestamp; // When the invite was created
-  expiresAt: Timestamp; // When the invite expires
+  expireAt: Timestamp; // When the invite expires
 }
 
 export const ROLE_COLORS: Record<Role, string> = {
@@ -48,7 +48,7 @@ export const ROLE_LEVELS: Record<Role, number> = {
 };
 
 const familiesCol = collection(db, "families");
-const invitesCol  = collection(db, "invites");
+const invitesFamilyCol = collection(db, "invitesFamily");
 
 /**
  * Creates a new family document in Firestore.
@@ -89,65 +89,69 @@ export async function createFamilyApi(
 /**
  * Creates a time‐limited invite code for the given family.
  *
- * @param familyId  ID of the family to invite into
+ * @param familyID  ID of the family to invite into
  * @param ttlHours  How many hours until the invite auto‐expires (default: 1)
  * @returns         A Promise resolving to the new Invite object
  */
-export async function createInvite(
-  familyId: string,
+export async function createFamilyInvite(
+  familyID: string,
   ttlHours = 1
 ): Promise<Invite> {
-  const now       = Date.now();
-  const expiresAt = Timestamp.fromDate(new Date(now + ttlHours * 3600e3));
-  const ref       = await addDoc(invitesCol, {
-    familyId,
+  const now      = Date.now();
+  const expireAt = Timestamp.fromDate(new Date(now + ttlHours * 3600e3));
+
+  const ref = await addDoc(invitesFamilyCol, {
+    familyID,
     createdAt: serverTimestamp(),
-    expiresAt,
+    expireAt,
   });
+
   const snap = await getDoc(ref);
+  const data = snap.data() as DocumentData;
+
   return {
     code:      ref.id,
-    familyId,
-    createdAt: snap.data()?.createdAt  as Timestamp,
-    expiresAt: snap.data()?.expiresAt   as Timestamp,
+    familyID:  data.familyID,
+    createdAt: data.createdAt,
+    expireAt:  data.expireAt,
   };
 }
 
 /**
- * Redeems an invite code by:
+ * Redeems an invite code by: 
  *  1. Validating it exists and isn’t expired
  *  2. Adding the user as a "guest"
  *  3. Deleting the invite so it can’t be reused
  *
  * @param code    The invite code (document ID)
  * @param userId  UID of the user to add to the family
- * @returns       A Promise resolving to an object with the familyId
+ * @returns       A Promise resolving to an object with the familyID
  * @throws        If the code is invalid or expired
  */
 export async function redeemInvite(
   code: string,
   userId: string
-): Promise<{ familyId: string }> {
-  const invRef  = doc(invitesCol, code);
+): Promise<{ familyID: string }> {
+  const invRef  = doc(invitesFamilyCol, code);
   const invSnap = await getDoc(invRef);
   if (!invSnap.exists()) {
     throw new Error("Invalid invite code.");
   }
 
-  const data = invSnap.data() as { familyId: string; expiresAt: Timestamp };
-  if (data.expiresAt.toMillis() < Date.now()) {
+  const data = invSnap.data() as { familyID: string; expireAt: Timestamp };
+  if (data.expireAt.toMillis() < Date.now()) {
     await deleteDoc(invRef);
     throw new Error("This invite has expired.");
   }
 
   const batch = writeBatch(db);
-  batch.update(doc(familiesCol, data.familyId), {
+  batch.update(doc(familiesCol, data.familyID), {
     [`roles.${userId}`]: "Guest",
   });
   batch.delete(invRef);
   await batch.commit();
 
-  return { familyId: data.familyId };
+  return { familyID: data.familyID };
 }
 
 /**
@@ -170,13 +174,13 @@ export async function listUserFamilies(
 /**
  * Fetches a single family document by ID.
  *
- * @param familyId  Document ID of the family
+ * @param familyID  Document ID of the family
  * @returns         A Promise resolving to the Family or null if not found
  */
 export async function fetchFamily(
-  familyId: string
+  familyID: string
 ): Promise<Family | null> {
-  const snap = await getDoc(doc(familiesCol, familyId));
+  const snap = await getDoc(doc(familiesCol, familyID));
   return snap.exists()
     ? ({ id: snap.id, ...(snap.data() as Omit<Family, "id">) })
     : null;
@@ -206,15 +210,15 @@ export async function createFamily(
 /**
  * Subscribes to real-time updates for a single family document.
  *
- * @param familyId  Document ID of the family to watch
+ * @param familyID  Document ID of the family to watch
  * @param cb        Callback invoked with the Family (or null) on each update
  * @returns         An Unsubscribe function to stop listening
  */
 export function subscribeFamily(
-  familyId: string,
+  familyID: string,
   cb: (family: Family | null) => void
 ): Unsubscribe {
-  const ref = doc(familiesCol, familyId);
+  const ref = doc(familiesCol, familyID);
   return onSnapshot(ref, (snap) => {
     cb(
       snap.exists()
@@ -227,23 +231,23 @@ export function subscribeFamily(
 /**
  * Deletes the entire family document.
  *
- * @param familyId – ID of the family to delete
+ * @param familyID – ID of the family to delete
  */
-export function deleteFamily(familyId: string): Promise<void> {
-  return deleteDoc(doc(db, "families", familyId));
+export function deleteFamily(familyID: string): Promise<void> {
+  return deleteDoc(doc(db, "families", familyID));
 }
 
 /**
  * Removes a single user from a family's roles map.
  *
- * @param familyId – ID of the family
+ * @param familyID – ID of the family
  * @param userId   – UID of the user to remove
  */
 export function removeUserFromFamily(
-  familyId: string,
+  familyID: string,
   userId: string
 ): Promise<void> {
-  return updateDoc(doc(db, "families", familyId), {
+  return updateDoc(doc(db, "families", familyID), {
     [`roles.${userId}`]: deleteField(),
   });
 }
@@ -263,16 +267,16 @@ export function hasRequiredRole(
 
 /**
  * Update a single member’s role.
- * @param familyId 
+ * @param familyID 
  * @param userId 
  * @param role 
  */
 export async function updateMemberRole(
-  familyId: string,
+  familyID: string,
   userId: string,
   role: Role
 ): Promise<void> {
-  const famRef = doc(familiesCol, familyId);
+  const famRef = doc(familiesCol, familyID);
   await updateDoc(famRef, {
     [`roles.${userId}`]: role,
   });
@@ -280,17 +284,17 @@ export async function updateMemberRole(
 
 /**
  * Transfer ownership of a family
- * @param familyId 
+ * @param familyID 
  * @param newOwnerId 
  * @param previousOwnerId 
  */
 export async function transferOwnership(
-  familyId: string,
+  familyID: string,
   newOwnerId: string,
   previousOwnerId: string
 ): Promise<void> {
   const batch = writeBatch(db);
-  const famRef = doc(familiesCol, familyId);
+  const famRef = doc(familiesCol, familyID);
 
   batch.update(famRef, {
     ownerId: newOwnerId,

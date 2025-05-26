@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   SafeAreaView,
   ScrollView,
@@ -20,6 +20,7 @@ import {
 } from "@/hooks/devices";
 import { useUserFamilies } from "@/hooks/family/useUserFamilies";
 import { auth } from "@/lib/firebase";
+import { router } from "expo-router";
 
 export default function DevicesScreen() {
   const uid = auth.currentUser!.uid;
@@ -65,6 +66,13 @@ export default function DevicesScreen() {
       d.name.toLowerCase().includes(search.toLowerCase()) &&
       (statusFilter === "all" ? true : d.status === statusFilter)
   );
+
+   const addBtnRef = useRef<any>(null);
+
+   const handleAddPress = () => {
+     addBtnRef.current?.bounce(300);
+     router.push("/devices/add");
+   };
 
   return (
     <SafeAreaView className="flex-1 bg-gray-100">
@@ -158,15 +166,16 @@ export default function DevicesScreen() {
         ))}
       </ScrollView>
 
-      {/* Add Button */}
-      <Pressable
-        onPress={() => {
-          /* navigate to add device */
-        }}
-        className="absolute bottom-6 right-6 bg-[#4F46E5] rounded-full p-4 shadow-lg"
-      >
-        <Ionicons name="add" size={28} color="white" />
-      </Pressable>
+      {/* Floating “+” Button with press animation */}
+      <Animatable.View ref={addBtnRef}>
+        <Pressable
+          onPress={handleAddPress}
+          className="absolute bottom-6 right-6 bg-[#4F46E5] rounded-full p-4 shadow-lg"
+          android_ripple={{ color: "#3B82F6", radius: 28 }}
+        >
+          <Ionicons name="add" size={28} color="white" />
+        </Pressable>
+      </Animatable.View>
 
       {/* Filter Modal */}
       <RNModal
