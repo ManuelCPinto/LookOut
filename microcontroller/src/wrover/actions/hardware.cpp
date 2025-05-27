@@ -8,6 +8,8 @@
 #include <Ticker.h>
 #include "database.h"
 #include "hardware.h"
+#include <common/mqtt.h>
+#include <common/mqtt_data.h>
 
 using namespace std;
 
@@ -62,10 +64,7 @@ void addFingerprintUserToFirebase(const char *nodeId, const char *userId)
 
   DynamicJsonDocument inDoc(1024);
   deserializeJson(inDoc, fbdo.payload());
-  JsonVariant valuesVar = inDoc["fields"]
-                               ["registeredUsers"]
-                               ["arrayValue"]
-                               ["values"];
+  JsonVariant valuesVar = inDoc["fields"]["registeredUsers"]["arrayValue"]["values"];
   bool hasExisting = valuesVar.is<JsonArray>();
   JsonArray existing = hasExisting ? valuesVar.as<JsonArray>() : JsonArray();
 
@@ -89,21 +88,79 @@ void addFingerprintUserToFirebase(const char *nodeId, const char *userId)
   body.concat("\"}");
   body.concat("]}}}}");
 
-  if (!Firebase.Firestore.patchDocument(
-          &fbdo,
-          FIREBASE_PROJECT,
-          "",
-          path, 
-          body,    
-          "registeredUsers"))
+  if (!Firebase.Firestore.patchDocument(&fbdo, FIREBASE_PROJECT, "", path, body, "registeredUsers"))
   {
-    Serial.printf("patchDocument failed: %s\n",
-                  fbdo.errorReason().c_str());
+    Serial.printf("patchDocument failed: %s\n", fbdo.errorReason().c_str());
   }
 }
+
 void logToFirebase(const char *nodeId, LogData logData)
 {
   FirebaseJson json;
   logData.toJson(json);
   Firebase.RTDB.setJSON(&fbdo, fmt::format("/devices/{}/logs/{}", nodeId, logData.createdAt), &json);
+}
+
+bool deviceHasOwner(const char *nodeId)
+{
+  String path = "devices/";
+  path.concat(nodeId);
+  if (!Firebase.Firestore.getDocument(&fbdo, FIREBASE_PROJECT, "", path.c_str())) {
+    Serial.printf("getDocument failed: %s\n", fbdo.errorReason().c_str());
+    return false; 
+  }
+  if (fbdo.httpCode() != 200) {
+    Serial.printf("HTTP %d on getDocument for %s\n", fbdo.httpCode(), path.c_str());
+    return false;
+  }
+  DynamicJsonDocument json(512);
+  deserializeJson(json, fbdo.payload());
+  const char *owner = json["fields"]["ownerId"]["stringValue"];
+  if (!owner || strlen(owner) == 0) {
+    Serial.println("no owner set");
+    return false;
+  }
+
+  Serial.printf("ownerId is set to: %s\n", owner);
+  return true;
+}
+
+void sendOled(const char *payloadJson)
+{
+  static unsigned long lastTs = 0;
+  unsigned long now = millis();
+  Serial.printf("\n[WROVER %lu] ➤ sendOled() called\n", now - lastTs);
+  lastTs = now;
+
+  String topic = WROOM_UNIQUE_ID;
+  topic.concat("/");
+  topic.concat(OledData::TOPIC);
+
+  Serial.printf("[WROVER]   topic: %s\n", topic.c_str());
+  Serial.printf("[WROVER]   payload: %s\n", payloadJson);
+  publishMQTT(topic.c_str(), (uint8_t*)payloadJson, strlen(payloadJson));
+}
+
+
+void showRegistrationPrompt()
+{
+  StaticJsonDocument<256> jd;
+  jd["layout"]   = "side_by_side";
+  jd["qrData"]   = WROVER_UNIQUE_ID;
+  jd["textData"] = "Please register via app";
+
+  String payload;
+  serializeJson(jd, payload);
+  sendOled(payload.c_str());
+}
+
+void showWelcome()
+{
+  StaticJsonDocument<128> jd;
+  jd["message"]   = "Welcome to Lookout!";
+  jd["isQrCode"]  = false;
+
+  String payload;
+  serializeJson(jd, payload);
+  sendOled(payload.c_str());
 }

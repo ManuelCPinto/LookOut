@@ -103,6 +103,6 @@ struct FingerprintData
   }
 };
 
-const char *TAKE_PHOTO_TOPIC = "sensor/camera/take_photo";
+static const char *TAKE_PHOTO_TOPIC = "sensor/camera/take_photo";
 
 #endif

@@ -13,6 +13,20 @@
 #include <Ticker.h>
 
 using namespace std;
+static volatile bool initialOledReceived = false;
+
+struct CompositeOled {
+  String layout;
+  String qrData;
+  String textData;
+  static CompositeOled fromJson(const JsonDocument& d) {
+    CompositeOled c;
+    c.layout   = d["layout"].as<String>();
+    c.qrData   = d["qrData"].as<String>();
+    c.textData = d["textData"].as<String>();
+    return c;
+  }
+};
 
 String MQTT_TOPICS[] = {
     OledData::TOPIC,
@@ -61,25 +75,29 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
 
   if (strcmp(topic, OledData::TOPIC) == 0)
   {
-    OledData oledData = OledData::fromJson(doc);
-    if (oledData.isQrCode)
+    initialOledReceived = true;
+    StaticJsonDocument<256> doc;
+    DeserializationError err = deserializeJson(doc, payload, length);
+    if (!err)
     {
-      displayQRCode(oledData.message);
+      if (doc.containsKey("layout"))
+      {
+        displayQRCode((const char*)payload);
+      }
+      else if (doc.containsKey("message"))
+      {
+        const char *msg = doc["message"];
+        displayText(msg);
+      }
     }
-    else
-    {
-      displayText(oledData.message);
-    }
+    return;
   }
   else if (strcmp(topic, FingerprintData::TOPIC) == 0)
   {
-    Serial.printf("WROOM");
     FingerprintData fingerprintData = FingerprintData::fromJson(doc);
-    Serial.printf("Type: %d\n", (int)fingerprintData.type);
     switch (fingerprintData.type)
     {
     case FINGERPRINT_REGISTRATION:
-      Serial.printf("WROOM REGISTRATION");
       uint16_t id = registerFingerprint(fingerprintCallback);
 
       if (id > 0)
@@ -95,7 +113,6 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
         newFingerprintData.toJson(json);
         uint8_t jsonBuffer[256];
         size_t jsonLen = serializeJson(json, jsonBuffer);
-        Serial.printf("WROOM REGISTRATION END");
         publishMQTT(string(WROVER_UNIQUE_ID + string("/") + topic).c_str(), jsonBuffer, jsonLen);
       }
       break;
@@ -128,7 +145,6 @@ void loopScanFingerprint() {
 void setup()
 {
   Serial.begin(9600);
-
   Serial.println("Loading WiFi...");
   connectWifi(WIFI_SSID, WIFI_PASSWORD);
   Serial.println("Loading timestamp...");
@@ -150,8 +166,31 @@ void setup()
   Serial.println("------------------");
 
   Serial.println("Ready!");
-  displayText("Ready!", 2000);
+  {
+    int dotCount = 0;
+    while (!initialOledReceived)
+    {
+      char buf[16];
+      int dots = dotCount % 4;
+      snprintf(buf, sizeof(buf), "Loading%.*s", dots, "...");
+      displayText(buf, 0);
 
+      unsigned long start = millis();
+      while (millis() - start < 500)
+      {
+        loopMQTT(
+          WROOM_UNIQUE_ID,
+          MQTT_USERNAME,
+          MQTT_PASSWORD,
+          fullTopics,
+          MQTT_TOPIC_COUNT
+        );
+        delay(20);
+      }
+      dotCount++;
+    }
+    Serial.println("Wrover init received, starting fingerprint loop");
+  }
   fingerprintIntervalTimer.attach_ms(2000, loopScanFingerprint);
 }
 
