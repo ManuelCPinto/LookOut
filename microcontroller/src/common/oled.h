@@ -2,7 +2,7 @@
 #define OLED_H
 
 /**
- * Load the OLED display.
+ * Loads the OLED display (REQUIRED AT THE START).
  *
  * @return Whether loaded successfully.
  */
