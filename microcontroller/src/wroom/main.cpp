@@ -7,22 +7,28 @@
 #include <common/mqtt_data.h>
 #include <common/oled.h>
 #include <common/fingerprint.h>
+#include <common/ultrasonic.h>
 #include <unordered_map>
 #undef B1
 #include <fmt/core.h>
 #include <Ticker.h>
 
 using namespace std;
+
+static const int MIN_ULTRASONIC_DISTANCE = 10;
+
 static volatile bool initialOledReceived = false;
 
-struct CompositeOled {
+struct CompositeOled
+{
   String layout;
   String qrData;
   String textData;
-  static CompositeOled fromJson(const JsonDocument& d) {
+  static CompositeOled fromJson(const JsonDocument &d)
+  {
     CompositeOled c;
-    c.layout   = d["layout"].as<String>();
-    c.qrData   = d["qrData"].as<String>();
+    c.layout = d["layout"].as<String>();
+    c.qrData = d["qrData"].as<String>();
     c.textData = d["textData"].as<String>();
     return c;
   }
@@ -37,6 +43,7 @@ String *fullTopics;
 std::unordered_map<int, string> fingerprintUserIds;
 
 Ticker fingerprintIntervalTimer;
+Ticker ultrasonicIntervalTimer;
 
 void fingerprintCallback(FingerprintStage stage, FingerprintError error)
 {
@@ -82,7 +89,7 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
     {
       if (doc.containsKey("layout"))
       {
-        displayQRCode((const char*)payload);
+        displayQRCode((const char *)payload);
       }
       else if (doc.containsKey("message"))
       {
@@ -120,7 +127,8 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
   }
 }
 
-void loopScanFingerprint() {
+void loopScanFingerprint()
+{
   if (!isFingerprintRegistering)
   {
     int16_t id = scanFingerprint();
@@ -139,6 +147,22 @@ void loopScanFingerprint() {
 
       displayText(fingerprintUserId == "" ? "Hello!" : string("Hello, " + fingerprintUserId + "!").c_str(), 2000);
     }
+  }
+}
+
+void loopUltrasonicSensor()
+{
+  float distance = fetchDistance();
+  if (distance > MIN_ULTRASONIC_DISTANCE)
+  {
+    UltrasonicData newFingerprintData = {true};
+
+    JsonDocument json;
+    newFingerprintData.toJson(json);
+    uint8_t jsonBuffer[256];
+    size_t jsonLen = serializeJson(json, jsonBuffer);
+
+    publishMQTT(string(WROVER_UNIQUE_ID + string("/sensor/ultrasonic")).c_str(), jsonBuffer, jsonLen);
   }
 }
 
@@ -166,32 +190,30 @@ void setup()
   Serial.println("------------------");
 
   Serial.println("Ready!");
+  int dotCount = 0;
+  while (!initialOledReceived)
   {
-    int dotCount = 0;
-    while (!initialOledReceived)
-    {
-      char buf[16];
-      int dots = dotCount % 4;
-      snprintf(buf, sizeof(buf), "Loading%.*s", dots, "...");
-      displayText(buf, 0);
+    char buf[16];
+    int dots = dotCount % 4;
+    snprintf(buf, sizeof(buf), "Loading%.*s", dots, "...");
+    displayText(buf, 0);
 
-      unsigned long start = millis();
-      while (millis() - start < 500)
-      {
-        loopMQTT(
+    unsigned long start = millis();
+    while (millis() - start < 500)
+    {
+      loopMQTT(
           WROOM_UNIQUE_ID,
           MQTT_USERNAME,
           MQTT_PASSWORD,
           fullTopics,
-          MQTT_TOPIC_COUNT
-        );
-        delay(20);
-      }
-      dotCount++;
+          MQTT_TOPIC_COUNT);
+      delay(20);
     }
-    Serial.println("Wrover init received, starting fingerprint loop");
+    dotCount++;
   }
+  Serial.println("Wrover init received, starting fingerprint loop");
   fingerprintIntervalTimer.attach_ms(2000, loopScanFingerprint);
+  ultrasonicIntervalTimer.attach_ms(2000, loopUltrasonicSensor);
 }
 
 void loop()
