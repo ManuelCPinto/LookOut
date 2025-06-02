@@ -177,6 +177,8 @@ void setup()
   loadOLED();
   Serial.println("Loading fingerprint...");
   loadFingerprint();
+  Serial.println("Loading ultrasonic...");
+  loadUltrasonic();
   Serial.println("Loading MQTT...");
   loadMQTT(MQTT_SERVER, MQTT_PORT, mqttCallback);
 
