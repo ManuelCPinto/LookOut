@@ -6,6 +6,7 @@
 
 typedef enum
 {
+  FINGERPRINT_ERROR,
   FINGERPRINT_FIRST_REGISTRATION_STAGE,  // "Place your finger on the sensor..."
   FINGERPRINT_REMOVE_FINGER_STAGE,       // "Remove your finger..."
   FINGERPRINT_SECOND_REGISTRATION_STAGE, // "Place the same finger again..."
@@ -22,6 +23,8 @@ typedef enum
 } FingerprintError;
 
 extern Adafruit_Fingerprint finger;
+
+extern bool isFingerprintRegistering;
 
 /**
  * Loads the fingerprint sensor (REQUIRED AT THE START).
@@ -40,18 +43,18 @@ bool loadFingerprint();
 uint16_t findFreeId(uint16_t maxId);
 
 /**
- * Registers a new fingerprint to the sensor.
+ * Registers a fingerprint and calls the callback function with the current stage or error.
  *
- * @param callback A function to call whenever a new fingerprint stage occurs.
- * @return A fingerprint error if any.
+ * @param callback The function to call with the current stage or error.
+ * @return The ID of the registered fingerprint.
  */
-FingerprintError registerFingerprint(void (*callback)(FingerprintStage stage));
+uint16_t registerFingerprint(void (*callback)(FingerprintStage stage, FingerprintError error));
 
 /**
  * Scans the fingerprint and returns its ID if valid.
  *
  * @return The fingerprint ID if valid (1-64 for AS608).
  */
-uint16_t scanFingerprint();
+int16_t scanFingerprint();
 
 #endif

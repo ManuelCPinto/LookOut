@@ -5,13 +5,16 @@
 
 using namespace std;
 
+static const int BUZZER_PIN = 15;
+
+static const unsigned long OWNER_POLL_INTERVAL = 5000;
+
 /**
  * Beeps the buzzer connected to the specified pin for the given duration.
  *
- * @param pin The GPIO pin number where the buzzer is connected.
  * @param duration The duration in milliseconds for which the buzzer should beep.
  */
-void beep(uint8_t pin, uint32_t duration);
+void beep(uint32_t duration);
 
 /**
  * Takes a photo and uploads it to Supabase.
@@ -20,7 +23,7 @@ void beep(uint8_t pin, uint32_t duration);
  * @param folderName The name of the folder in Supabase where the photo will be uploaded.
  * @param callback The callback function to be called when photo is send.
  */
-void takePhotoToSupabase(const char *bucket, const char *folderName, function<void(string photoURL, time_t timestamp)> callback = nullptr);
+void takePhotoToSupabase(const char *bucket, const char *folderName, function<void(string photoURL, time_t timestamp)> callback);
 
 /**
  * Adds a fingerprint user to Firebase.
@@ -37,5 +40,23 @@ void addFingerprintUserToFirebase(const char *nodeId, const char *userId);
  * @param logData The log data to be sent.
  */
 void logToFirebase(const char *nodeId, LogData logData);
+
+/**
+ * Returns true if /devices/{nodeId}.ownerId is set (non-empty) in Firestore.
+ */
+bool deviceHasOwner(const char *nodeId);
+
+/**
+ * Sends two MQTT‐OLED commands to the Wroom:
+ *   1) QR code with the Wrover’s unique ID
+ *   2) “Please register via app” text
+ */
+void showRegistrationPrompt();
+
+/**
+ * Sends one MQTT‐OLED command to the Wroom:
+ *   “Welcome to Lookout!”
+ */
+void showWelcome();
 
 #endif

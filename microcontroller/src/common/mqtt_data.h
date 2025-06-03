@@ -3,6 +3,13 @@
 
 #include <ArduinoJson.h>
 
+enum FingerprintDataType : int
+{
+  FINGERPRINT_REGISTRATION = 0,
+  FINGERPRINT_UPDATE = 1,
+  FINGERPRINT_TOUCH = 2
+};
+
 struct BuzzerData
 {
 private:
@@ -31,15 +38,15 @@ struct OledData
 {
   static constexpr const char *TOPIC = "sensor/oled";
 
-  char *message;
+  const char *message;
   bool isQrCode;
 
-  OledData(char *m, bool q) : message(m), isQrCode(q) {}
+  OledData(const char *m, bool q) : message(m), isQrCode(q) {}
 
   static OledData fromJson(const JsonDocument &doc)
   {
     return {
-        doc["message"] | nullptr,
+        doc["message"] | "",
         doc["isQrCode"] | false};
   }
 
@@ -50,26 +57,52 @@ struct OledData
   }
 };
 
-struct FingerprintData
+struct UltrasonicData
 {
-  static constexpr const char *TOPIC = "sensor/fingerprint";
+  static constexpr const char *TOPIC = "sensor/ultrasonic";
 
-  char *userId;
+  bool isClose;
 
-  FingerprintData(char *i) : userId(i) {}
+  UltrasonicData(bool c) : isClose(c) {}
 
-  static FingerprintData fromJson(const JsonDocument &doc)
+  static UltrasonicData fromJson(const JsonDocument &doc)
   {
     return {
-        doc["userId"] | nullptr};
+        doc["isClose"] | false};
   }
 
   void toJson(JsonDocument &doc) const
   {
-    doc["userId"] = userId;
+    doc["isClose"] = isClose;
   }
 };
 
-const char *TAKE_PHOTO_TOPIC = "sensor/camera/take_photo";
+struct FingerprintData
+{
+  static constexpr const char *TOPIC = "sensor/fingerprint";
+
+  FingerprintDataType type;
+  const char *userId;
+  bool isNew;
+
+  FingerprintData(FingerprintDataType t, const char *i = "", bool n = false) : type(t), userId(i), isNew(n) {}
+
+  static FingerprintData fromJson(const JsonDocument &doc)
+  {
+    return {
+        static_cast<FingerprintDataType>(doc["type"] | 0),
+        doc["userId"] | "",
+        doc["isNew"] | false};
+  }
+
+  void toJson(JsonDocument &doc) const
+  {
+    doc["type"] = type;
+    doc["userId"] = userId;
+    doc["isNew"] = isNew;
+  }
+};
+
+static const char *TAKE_PHOTO_TOPIC = "sensor/camera/take_photo";
 
 #endif

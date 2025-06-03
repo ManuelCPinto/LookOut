@@ -11,15 +11,15 @@ void loadMQTT(const char *mqttServer, int mqttPort, void (*callback)(char *topic
   client.setCallback(callback);
 }
 
-void loopMQTT(const char *mqttUsername, const char *mqttPassword, const char *mqttTopics[], int topicCount)
+void loopMQTT(const char *mqttClientId, const char *mqttUsername, const char *mqttPassword, String mqttTopics[], int topicCount)
 {
   while (!client.connected())
   {
-    if (client.connect("ESP32Client", mqttUsername, mqttPassword))
+    if (client.connect(mqttClientId, mqttUsername, mqttPassword))
     {
       for (int i = 0; i < topicCount; i++)
       {
-        client.subscribe(mqttTopics[i]);
+        client.subscribe(mqttTopics[i].c_str());
       }
     }
     else
@@ -29,4 +29,8 @@ void loopMQTT(const char *mqttUsername, const char *mqttPassword, const char *mq
   }
 
   client.loop();
+}
+
+void publishMQTT(const char *topic, uint8_t *payload, unsigned int length) {
+  client.publish(topic, payload, length);
 }

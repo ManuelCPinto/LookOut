@@ -97,7 +97,7 @@ export default function LoginPage() {
           {/* Submit */}
           <TouchableOpacity
             className={`py-3 rounded-lg items-center mb-4 ${
-              canSubmit ? "bg-blue-600" : "bg-blue-300"
+              canSubmit ? "bg-[#4F46E5]" : "bg-gray-400"
             } ${loading ? "opacity-60" : ""}`}
             onPress={handleLogin}
             disabled={!canSubmit || loading}

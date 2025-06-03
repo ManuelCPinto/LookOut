@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import * as Animatable from "react-native-animatable";
 import cameraIcon from "@/assets/camera.png";
 
 export default function HomeScreen() {
@@ -38,11 +39,13 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-100">
-      <ScrollView className="p-4 space-y-4">
-        
-        {/* ── Welcome + Stats + Devices ── */}
-        <View className="px-4 py-5 bg-white shadow rounded-2xl">
-          {/* Greeting */}
+      <ScrollView className="p-4 space-y-4" showsVerticalScrollIndicator={false}>
+        {/* ── Card: Welcome + Stats + Devices ── */}
+        <Animatable.View
+          animation="fadeInUp"
+          delay={100}
+          className="px-4 py-5 bg-white shadow rounded-2xl"
+        >
           <Text className="text-xl font-semibold text-gray-800">
             Welcome back 👋
           </Text>
@@ -50,21 +53,17 @@ export default function HomeScreen() {
             Monitor your spaces in real time with LookOut.
           </Text>
 
-          {/* Stats */}
+          {/* Stats row */}
           <View className="flex-row justify-between mt-4">
             {stats.map((s, i) => (
               <View key={i} className="items-center flex-1">
-                <Text className="text-2xl font-bold text-[#4F46E5]">
-                  {s.value}
-                </Text>
-                <Text className="mt-1 text-xs text-gray-500">
-                  {s.label}
-                </Text>
+                <Text className="text-2xl font-bold text-[#4F46E5]">{s.value}</Text>
+                <Text className="mt-1 text-xs text-gray-500">{s.label}</Text>
               </View>
             ))}
           </View>
 
-          {/* Your Devices */}
+          {/* Devices grid */}
           <Text className="mt-6 mb-2 text-lg font-medium text-gray-800">
             Your Devices
           </Text>
@@ -85,18 +84,24 @@ export default function HomeScreen() {
               </View>
             ))}
           </View>
+        </Animatable.View>
 
-          {/* View All */}
+        {/* ── Button: View All Devices ── */}
+        <Animatable.View animation="fadeInUp" delay={300}>
           <TouchableOpacity
-            className="mt-2 py-3 bg-[#4F46E5] rounded-full items-center"
+            className="py-3 bg-[#4F46E5] rounded-full items-center"
             onPress={() => router.push("/devices")}
           >
             <Text className="font-semibold text-white">View All Devices</Text>
           </TouchableOpacity>
-        </View>
+        </Animatable.View>
 
-        {/* ── Recent Alerts ── */}
-        <View className="px-4 py-5 bg-white shadow rounded-2xl">
+        {/* ── Card: Recent Alerts ── */}
+        <Animatable.View
+          animation="fadeInUp"
+          delay={500}
+          className="px-4 py-5 bg-white shadow rounded-2xl"
+        >
           <Text className="text-lg font-medium text-gray-800">
             Recent Alerts
           </Text>
@@ -120,9 +125,7 @@ export default function HomeScreen() {
                       ? `Doorbell rang – ${a.cameraName}`
                       : `Motion detected – ${a.cameraName}`}
                   </Text>
-                  <Text className="mt-1 text-xs text-gray-500">
-                    {a.time}
-                  </Text>
+                  <Text className="mt-1 text-xs text-gray-500">{a.time}</Text>
                 </View>
               </View>
             ))}
@@ -134,8 +137,7 @@ export default function HomeScreen() {
           >
             <Text className="font-semibold text-white">View All Alerts</Text>
           </TouchableOpacity>
-        </View>
-        
+        </Animatable.View>
       </ScrollView>
     </SafeAreaView>
   );

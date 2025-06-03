@@ -1,23 +1,17 @@
 import { useState } from "react";
-import { createInvite as createInviteApi } from "@/lib/family";
+import { createFamilyInvite as createInviteApi } from "@/lib/family";
 
 /**
- * Manages creation and display state for an invite code.
+ * Manages creation and display of a family‐invite code.
  *
- * @param familyId - ID of the family to create invites for
- * @returns
- *   - inviteCode: the latest code string
- *   - show: boolean flag for whether the modal should display
- *   - create: fn(ttlHours?) to generate a new code
- *   - hide:   fn() to hide the invite modal
+ * @param familyID – ID of the family to create invites for
  */
-
-export function useInvite(familyId: string) {
+export function useInvite(familyID: string) {
   const [inviteCode, setInviteCode] = useState("");
   const [show, setShow]             = useState(false);
 
   const create = async (ttlHours = 1) => {
-    const inv = await createInviteApi(familyId, ttlHours);
+    const inv = await createInviteApi(familyID, ttlHours);
     setInviteCode(inv.code);
     setShow(true);
   };

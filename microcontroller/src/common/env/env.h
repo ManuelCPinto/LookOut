@@ -9,11 +9,13 @@ extern int MQTT_PORT;
 extern const char* MQTT_USERNAME;
 extern const char* MQTT_PASSWORD;
 
-extern uint8_t WROOM_MAC_ADDRESS[];
-extern uint8_t WROVER_MAC_ADDRESS[];
+extern const char* WROOM_UNIQUE_ID;
+extern const char* WROVER_UNIQUE_ID;
 
 extern const char* FIREBASE_API_KEY;
 extern const char* FIREBASE_DATABASE_URL;
+extern const char* FIREBASE_EMAIL;
+extern const char* FIREBASE_PASSWORD;
 
 extern const char* SUPABASE_URL;
 extern const char* SUPABASE_ANON_KEY;
