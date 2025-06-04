@@ -1,65 +1,69 @@
 #ifndef DATABASE_H
 #define DATABASE_H
 
-#include <Firebase_ESP_Client.h>
+#include <Arduino.h>           
+#include <Firebase_ESP_Client.h> 
+#include <ArduinoJson.h>        
 
-enum LogType
-{
-  USER_REQUEST,
-  PROXIMITY,
-  RING_DOORBELL,
-  NEW_FINGERPRINT
+enum LogType {
+  RING_DOORBELL = 0,
+  USER_REQUEST = 1,
+  PROXIMITY     = 2,
+  NEW_FINGERPRINT = 3
 };
 
 struct LogData
 {
-  static constexpr const char *TOPIC = "sensor/fingerprint";
+  LogType     type;
+  int         createdAt;  
+  const char *photoURL;    
+  const char *userId;    
 
-  enum LogType type;
-  int createdAt;
-  const char* photoURL;
-  const char* userId;
-
-  LogData(LogType t, int c = time(NULL), const char* p = "", const char* u = "") : type(t), createdAt(c), photoURL(p), userId(u) {}
-
-  static LogData fromJson(FirebaseJson &json)
+  LogData(LogType t,
+          int        c = (int)time(NULL),
+          const char *p = "",
+          const char *u = "")
+    : type(t),
+      createdAt(c),
+      photoURL(p ? p : ""),
+      userId((u && u[0] != '\0') ? u : "Anonymous")
   {
-    FirebaseJsonData result;
-
-    LogType type;
-    if (json.get(result, "type") && result.success)
-    {
-      type = (LogType)result.intValue;
-    }
-
-    int createdAt;
-    if (json.get(result, "createdAt") && result.success)
-    {
-      createdAt = result.intValue;
-    }
-
-    char* photoURL;
-    if (json.get(result, "photoURL") && result.success)
-    {
-      strcpy(photoURL, result.stringValue.c_str());
-    }
-
-    char* userId;
-    if (json.get(result, "userId") && result.success)
-    {
-      strcpy(userId, result.stringValue.c_str());
-    }
-
-    return {type, createdAt, photoURL, userId};
   }
 
-  void toJson(FirebaseJson &json) const
+  static String toRFC3339(int epoch)
   {
-    json.set("type", (int)type);
-    json.set("createdAt", createdAt);
-    json.set("photoURL", photoURL);
-    json.set("userId", userId);
+    struct tm tmstruct;
+    gmtime_r((time_t *)&epoch, &tmstruct);
+    char buf[32];
+    sprintf(buf,
+            "%04d-%02d-%02dT%02d:%02d:%02dZ",
+            tmstruct.tm_year + 1900,
+            tmstruct.tm_mon + 1,
+            tmstruct.tm_mday,
+            tmstruct.tm_hour,
+            tmstruct.tm_min,
+            tmstruct.tm_sec);
+    return String(buf);
+  }
+
+  String toJson() const
+  {
+    StaticJsonDocument<384> root;
+    JsonObject fields = root.createNestedObject("fields");
+    JsonObject typeObj = fields.createNestedObject("type");
+    typeObj["integerValue"] = static_cast<int>(type);
+    String ts = toRFC3339(createdAt);
+    JsonObject createdObj = fields.createNestedObject("createdAt");
+    createdObj["timestampValue"] = ts;
+    JsonObject photoObj = fields.createNestedObject("photoURL");
+    photoObj["stringValue"] = photoURL ? photoURL : "";
+    JsonObject userObj = fields.createNestedObject("userId");
+    userObj["stringValue"] = userId;
+
+    String out;
+    serializeJson(root, out);
+    return out;
   }
 };
 
-#endif
+#endif 

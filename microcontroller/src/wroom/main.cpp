@@ -212,9 +212,10 @@ void setup()
       delay(20);
     }
     dotCount++;
-  }
-  Serial.println("Wrover init received, starting fingerprint loop");
+  }  
+  
   fingerprintIntervalTimer.attach_ms(2000, loopScanFingerprint);
+  ultrasonicIntervalTimer.attach_ms(2000, loopUltrasonicSensor);
   ultrasonicIntervalTimer.attach_ms(2000, loopUltrasonicSensor);
 }
 

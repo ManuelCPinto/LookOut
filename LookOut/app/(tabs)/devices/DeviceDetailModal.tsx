@@ -1,3 +1,5 @@
+// app/(tabs)/devices/DeviceDetailModal.tsx
+
 import React, { useEffect, useState, useCallback, memo } from "react";
 import {
   Pressable,
@@ -108,6 +110,7 @@ const SheetContent = memo(function SheetContent({
 
     return () => clearTimeout(timer);
   }, [successVisible]);
+
   const handleSave = useCallback(async () => {
     await rename(device.id, draftName);
     setEditing(false);
@@ -131,25 +134,28 @@ const SheetContent = memo(function SheetContent({
   }, []);
 
   const onConfirm = useCallback(async () => {
-    setConfirmVisible(false);  
+    setConfirmVisible(false);
     handleRegisterFingerprint();
-      const already = await checkOnce();
+    const already = await checkOnce();
     if (already) {
       setErrorVisible(true);
     } else {
       startPolling();
     }
-  }, [
-    handleRegisterFingerprint, 
-    checkOnce, 
-    startPolling
-  ]);
+  }, [handleRegisterFingerprint, checkOnce, startPolling]);
 
   useEffect(() => {
     if (isRegistered) {
       setSuccessVisible(true);
     }
   }, [isRegistered]);
+
+  const handleRequestSnapshot = useCallback(() => {
+    publish(`${device.id}/sensor/camera/take_photo`, {
+      type: "TAKE_PHOTO",
+      userId: uid,
+    });
+  }, [device.id, publish, uid]);
 
   const h = Math.floor(uptime / 3600);
   const m = Math.floor((uptime % 3600) / 60);
@@ -293,13 +299,13 @@ const SheetContent = memo(function SheetContent({
           </View>
         </Animatable.View>
 
-        {/* Actions */}
+        {/* ─── ACTIONS ─── */}
         <View className="flex-row justify-around px-4 mt-6">
-          <Pressable className="flex-1 mx-2 bg-[#4F46E5] py-3 rounded-xl items-center shadow">
+          <Pressable
+            onPress={handleRequestSnapshot} 
+            className="flex-1 mx-2 bg-[#4F46E5] py-3 rounded-xl items-center shadow"
+          >
             <Text className="font-semibold text-white">Request Snapshot</Text>
-          </Pressable>
-          <Pressable className="flex-1 mx-2 bg-[#4F46E5] py-3 rounded-xl items-center shadow">
-            <Text className="font-semibold text-white">Go Live</Text>
           </Pressable>
         </View>
 

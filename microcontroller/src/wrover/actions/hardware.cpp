@@ -10,6 +10,10 @@
 #include "hardware.h"
 #include <common/mqtt.h>
 #include <common/mqtt_data.h>
+#include <ArduinoJson.h>
+#include <Firebase_ESP_Client.h>
+#include <fmt/core.h>
+#include <time.h>  
 
 using namespace std;
 
@@ -94,11 +98,65 @@ void addFingerprintUserToFirebase(const char *nodeId, const char *userId)
   }
 }
 
-void logToFirebase(const char *nodeId, LogData logData)
+void logToFirebase(const char *deviceId, LogData logData)
 {
-  FirebaseJson json;
-  logData.toJson(json);
-  Firebase.RTDB.setJSON(&fbdo, fmt::format("/devices/{}/logs/{}", nodeId, logData.createdAt), &json);
+  // 1) Convert createdAt (epoch seconds) → RFC3339 string: "YYYY-MM-DDThh:mm:ssZ"
+  time_t raw      = (time_t)logData.createdAt;
+  struct tm tmbuf;
+  gmtime_r(&raw, &tmbuf);
+  char ts[32];
+  strftime(ts, sizeof(ts), "%FT%TZ", &tmbuf);
+  //   e.g. ts == "2025-06-04T12:34:56Z"
+
+  // 2) Build Firestore JSON payload under "fields": { … }
+  String payload = "{ \"fields\": {";
+
+  // nodeId → stringValue
+  payload += "\"deviceId\":{ \"stringValue\":\"";
+  payload += deviceId;
+  payload += "\" },";
+
+  // createdAt → timestampValue
+  payload += "\"createdAt\":{ \"timestampValue\":\"";
+  payload += ts;
+  payload += "\" },";
+
+  // photoURL → stringValue
+  payload += "\"photoURL\":{ \"stringValue\":\"";
+  payload += (logData.photoURL ? logData.photoURL : "");
+  payload += "\" },";
+
+  // type → integerValue
+  payload += "\"type\":{ \"integerValue\":\"";
+  payload += String(static_cast<int>(logData.type));
+  payload += "\" },";
+
+  // userId → stringValue
+  payload += "\"userId\":{ \"stringValue\":\"";
+  payload += (logData.userId ? logData.userId : "Anonymous");
+  payload += "\" }";
+
+  // close the “fields” container
+  payload += " }}";
+
+  // 3) Write to Firestore under collection “logs”, with an auto‐generated document ID:
+  if (! Firebase.Firestore.createDocument(
+         &fbdo,
+         FIREBASE_PROJECT,
+         "",       // default database
+         "logs",   // collection path
+         "",       // empty → auto‐ID
+         payload.c_str(),
+         ""        // no field mask
+       ))
+  {
+    Serial.printf("Firestore.createDocument failed: %s\n",
+                  fbdo.errorReason().c_str());
+  }
+  else
+  {
+    Serial.println("Log successfully written to Firestore → logs collection");
+  }
 }
 
 bool deviceHasOwner(const char *nodeId)
@@ -163,4 +221,13 @@ void showWelcome()
   String payload;
   serializeJson(jd, payload);
   sendOled(payload.c_str());
+}
+
+void showFingerprintPrompt() {
+  StaticJsonDocument<128> jd;
+  jd["message"]   = "Place your finger on the sensor";
+  jd["isQrCode"]  = false;
+  String out; 
+  serializeJson(jd, out);
+  sendOled(out.c_str());  
 }

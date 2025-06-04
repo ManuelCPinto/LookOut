@@ -7,8 +7,6 @@ using namespace std;
 
 static const int BUZZER_PIN = 15;
 
-static const unsigned long OWNER_POLL_INTERVAL = 5000;
-
 /**
  * Beeps the buzzer connected to the specified pin for the given duration.
  *
@@ -59,4 +57,5 @@ void showRegistrationPrompt();
  */
 void showWelcome();
 
+void showFingerprintPrompt();
 #endif

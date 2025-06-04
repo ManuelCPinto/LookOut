@@ -22,8 +22,8 @@ export function useMqttPublish() {
       useSSL: true,
       userName: USERNAME,
       password: PASSWORD,
-      onSuccess: () => console.log("✅ MQTT connected"),
-      onFailure: (e) => console.warn("❌ MQTT failed", e),
+      onSuccess: () => console.log("MQTT connected"),
+      onFailure: (e) => console.warn("MQTT failed", e),
     });
 
     clientRef.current = client;
