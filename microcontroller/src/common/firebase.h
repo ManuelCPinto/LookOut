@@ -14,6 +14,6 @@ extern FirebaseConfig config;
  * @param password Firebase's account password.
  * @return Whether loaded successfully.
  */
-bool loadFirebase(const char *apiKey, const char *email = nullptr, const char *password = nullptr);
+bool loadFirebase(const char *apiKey, const std::string &email = "", const std::string &password = "");
 
 #endif

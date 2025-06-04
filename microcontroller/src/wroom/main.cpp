@@ -89,12 +89,16 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
     {
       if (doc.containsKey("layout"))
       {
-        displayQRCode((const char *)payload);
+        const char *qrData = doc["qrData"] | "";
+        const char *textData = doc["textData"] | "";
+        int duration = doc["duration"] | 0;
+        displayQRCode(qrData, textData, duration);
       }
       else if (doc.containsKey("message"))
       {
-        const char *msg = doc["message"];
-        displayText(msg);
+        const char *msg = doc["message"] | "";
+        int duration = doc["duration"] | 0;
+        displayText(msg, duration);
       }
     }
     return;

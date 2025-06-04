@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <MD5Builder.h>
 #include <common/utils.h>
+#include <iostream>
+#include <sstream>
 
 char *hashMD5(const char *input)
 {
@@ -32,12 +34,60 @@ char *macToString(uint8_t mac[6])
   return macStr;
 }
 
-String* addPrefixToTopics(const String& prefix, const String topics[], int numTopics) {
-    String* newTopics = new String[numTopics];
+String *addPrefixToTopics(const String &prefix, const String topics[], int numTopics)
+{
+  String *newTopics = new String[numTopics];
 
-    for (int i = 0; i < numTopics; i++) {
-        newTopics[i] = prefix + topics[i];
+  for (int i = 0; i < numTopics; i++)
+  {
+    newTopics[i] = prefix + topics[i];
+  }
+
+  return newTopics;
+}
+
+void wrapText(const std::string &text, int x, int y, int width, int height, std::function<void(const char *text, int lineOffset)> callback)
+{
+  std::istringstream stream(text);
+  std::string word;
+  std::string line;
+
+  int lineOffset = 0;
+
+  while (word != "" || stream >> word)
+  {
+    std::string word2 = word;
+
+    if (word2.size() > width)
+    {
+      int remainingLen = width - line.size();
+      word = word2.substr(remainingLen);
+      word2 = word2.substr(0, remainingLen);
     }
 
-    return newTopics;
+    bool willWordFit = line.size() + word2.size() <= width;
+
+    if (willWordFit)
+    {
+      line += word2 + " ";
+      if (word == word2)
+        word = "";
+    }
+
+    if (!willWordFit || line.size() >= width)
+    {
+      callback(line.c_str(), ++lineOffset);
+      line = "";
+
+      if (lineOffset == height)
+      {
+        return;
+      }
+    }
+  }
+
+  if (line.size())
+  {
+    callback(line.c_str(), lineOffset);
+  }
 }

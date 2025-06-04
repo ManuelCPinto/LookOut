@@ -144,7 +144,7 @@ void sendOled(const char *payloadJson)
 
 void showRegistrationPrompt()
 {
-  StaticJsonDocument<256> jd;
+  JsonDocument jd;
   jd["layout"]   = "side_by_side";
   jd["qrData"]   = WROVER_UNIQUE_ID;
   jd["textData"] = "Please register via app";
@@ -156,7 +156,7 @@ void showRegistrationPrompt()
 
 void showWelcome()
 {
-  StaticJsonDocument<128> jd;
+  JsonDocument jd;
   jd["message"]   = "Welcome to Lookout!";
   jd["isQrCode"]  = false;
 
