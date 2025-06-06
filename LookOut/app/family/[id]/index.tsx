@@ -6,7 +6,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  FlatList,
   TextInput,
   Modal,
 } from "react-native";
@@ -29,6 +28,11 @@ import { useManageMembers } from "@/hooks/family/useManageMembers";
 import { useGetUsername } from "@/hooks/user";
 import { useSearchFilter } from "@/hooks/common";
 
+/**
+ * MemberItem: renders a single “card” for a family member.
+ * - Improved “Role” pill: now has both a tinted background and a 1px border
+ *   using ROLE_COLORS[role], plus consistent horizontal padding.
+ */
 function MemberItem({
   uid,
   role,
@@ -45,28 +49,47 @@ function MemberItem({
   const isYou = uid === currentUid;
   const { username } = useGetUsername(uid);
   const label = isYou ? "You" : username ?? uid.slice(-6);
-  const color = ROLE_COLORS[role];
+
+  // Build a 20%‐opaque background, plus use ROLE_COLORS[role] as border/text color:
+  const baseColor = ROLE_COLORS[role];
+  const pillBackground = baseColor + "33"; // 20% opacity hexadecimal (33 hex = 51 decimal)
+  const pillBorder = baseColor; // fully opaque border
 
   return (
-    <View className="flex-row items-center p-4 border-t border-gray-100">
-      <View className="items-center justify-center w-12 h-12 mr-4 bg-gray-200 rounded-full">
-        <Ionicons name="person" size={24} color="#94A3B8" />
+    <View className="flex-row items-center p-4 mb-3 bg-white shadow-sm rounded-xl">
+      {/* Avatar Circle */}
+      <View className="items-center justify-center w-12 h-12 mr-4 bg-indigo-100 rounded-full">
+        <Ionicons name="person" size={24} color="#4F46E5" />
       </View>
+
+      {/* Member Name */}
       <View className="flex-1">
-        <Text className="font-semibold text-gray-800">{label}</Text>
+        <Text className="text-lg font-medium text-gray-800">{label}</Text>
       </View>
+
+      {/* Role Pill */}
       <View
-        className="px-3 py-1 rounded-full"
-        style={{ backgroundColor: color + "22" }}
+        className="px-3 py-1 border rounded-full"
+        style={{
+          backgroundColor: pillBackground,
+          borderColor: pillBorder,
+          borderWidth: 1,
+        }}
       >
-        <Text className="text-xs font-medium" style={{ color }}>
+        <Text
+          className="text-xs font-semibold"
+          style={{ color: pillBorder }}
+        >
           {role}
         </Text>
       </View>
+
+      {/* “Manage” Ellipsis Button */}
       {canManage && (
         <TouchableOpacity
           onPress={onManage}
-          className="absolute p-1 right-4 top-4"
+          className="p-2 ml-3"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="ellipsis-vertical" size={20} color="#64748B" />
         </TouchableOpacity>
@@ -85,14 +108,18 @@ export default function FamilyDetailScreen() {
   const leaveFamily = useLeaveFamily(familyId, isOwner);
   const { inviteCode, show, create, hide } = useInvite(familyId);
 
+  // Fetch all members, then filter via search.
   const allMembers = useMembers(familyId);
   const {
     term,
     setTerm,
     filtered: members,
-  } = useSearchFilter(allMembers, (m, t) => m.uid.includes(t));
+  } = useSearchFilter(allMembers, (m, t) =>
+    m.uid.includes(t)
+  );
   const memberCount = members.length;
 
+  // Handlers for promoting/demoting/transferring.
   const { setRole, transfer, loading: managing } = useManageMembers(familyId);
 
   const [selected, setSelected] = useState<{ uid: string; role: Role } | null>(
@@ -111,10 +138,26 @@ export default function FamilyDetailScreen() {
     );
   }
 
+  const roleOrder: Record<Role, number> = {
+    Owner: 0,
+    Member: 1,
+    Guest: 2,
+  };
+
+  const sortedMembers = members
+    .slice()
+    .sort((a, b) => {
+      const ra = roleOrder[a.role];
+      const rb = roleOrder[b.role];
+      if (ra !== rb) return ra - rb;
+      const nameA =  a.uid.slice(-6).toLowerCase();
+      const nameB =  b.uid.slice(-6).toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+
   return (
     <Animatable.View animation="fadeIn" duration={300} style={{ flex: 1 }}>
       <SafeAreaView className="flex-1 bg-gray-100">
-        {/* Top Bar */}
         <View className="flex-row items-center px-4 pt-6 pb-4 bg-[#4F46E5]">
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -133,31 +176,28 @@ export default function FamilyDetailScreen() {
           )}
         </View>
 
-        {/* Search + Members Container */}
-        <View className="mx-4 mt-4 overflow-hidden bg-white shadow rounded-2xl">
-          {/* Search Bar */}
-          <View className="px-4 py-2 border-b border-gray-100">
-            <View className="flex-row items-center px-4 py-2 rounded-full bg-gray-50">
-              <Ionicons name="search" size={20} color="#64748B" />
-              <TextInput
-                className="flex-1 ml-3 text-gray-700"
-                placeholder="Search members..."
-                placeholderTextColor="#94A3B8"
-                value={term}
-                onChangeText={setTerm}
-              />
-            </View>
+        <View className="mx-4 mt-6">
+          <View className="flex-row items-center px-4 py-2 bg-white rounded-full shadow-md">
+            <Ionicons name="search" size={20} color="#94A3B8" />
+            <TextInput
+              className="flex-1 ml-3 text-gray-700"
+              placeholder="Search members..."
+              placeholderTextColor="#94A3B8"
+              value={term}
+              onChangeText={setTerm}
+              returnKeyType="search"
+            />
           </View>
 
-          {/* Members Header */}
-          <View className="flex-row items-center justify-between px-4 py-3">
+          {/* ── Members Header ──────────────────────────────────────────────── */}
+          <View className="flex-row items-center justify-between px-1 mt-5 mb-3">
             <Text className="text-xl font-semibold text-gray-800">
-              Members: {memberCount}
+              Members ({memberCount})
             </Text>
             <TouchableOpacity
               onPress={() => setConfirmFamilyModal(true)}
-              className={`px-4 py-1 rounded-full ${
-                isOwner ? "bg-red-100" : "bg-yellow-100"
+              className={`px-4 py-2 rounded-full ${
+                isOwner ? "bg-red-50" : "bg-yellow-50"
               }`}
             >
               <Text
@@ -170,29 +210,27 @@ export default function FamilyDetailScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Member Rows */}
-          {members.map((m, idx) => (
-            <MemberItem
-              key={m.uid}
-              uid={m.uid}
-              role={m.role}
-              currentUid={user.uid}
-              canManage={isOwner && m.uid !== user.uid}
-              onManage={() => {
-                setSelected(m);
-                setMenuVisible(true);
-              }}
-            />
-          ))}
-
-          {memberCount === 0 && (
-            <Text className="p-4 text-center text-gray-500">
-              No members found.
-            </Text>
+          {memberCount > 0 ? (
+            sortedMembers.map((m) => (
+              <MemberItem
+                key={m.uid}
+                uid={m.uid}
+                role={m.role}
+                currentUid={user.uid}
+                canManage={isOwner && m.uid !== user.uid}
+                onManage={() => {
+                  setSelected(m);
+                  setMenuVisible(true);
+                }}
+              />
+            ))
+          ) : (
+            <View className="items-center mt-8">
+              <Text className="text-gray-500">No members found.</Text>
+            </View>
           )}
         </View>
 
-        {/* Invite QR Modal */}
         <Modal
           visible={show}
           transparent
@@ -239,7 +277,6 @@ export default function FamilyDetailScreen() {
           </View>
         </Modal>
 
-        {/* Manage Member Menu */}
         <RNModal
           isVisible={menuVisible}
           onBackdropPress={() => setMenuVisible(false)}
@@ -300,7 +337,6 @@ export default function FamilyDetailScreen() {
           </View>
         </RNModal>
 
-        {/* Confirm Transfer Modal */}
         <RNModal
           isVisible={confirmMemberModal}
           onBackdropPress={() => setConfirmMemberModal(false)}
@@ -314,13 +350,11 @@ export default function FamilyDetailScreen() {
               Transfer Ownership?
             </Text>
             <Text className="mb-6 text-center">
-              This will make <Text className="font-semibold">{selName}</Text>{" "}
-              the owner.
+              This will make <Text className="font-semibold">{selName}</Text> the
+              owner.
             </Text>
             <View className="flex-row justify-end space-x-4">
-              <TouchableOpacity
-                onPress={() => setConfirmMemberModal(false)}
-              >
+              <TouchableOpacity onPress={() => setConfirmMemberModal(false)}>
                 <Text className="text-gray-500">Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -336,7 +370,6 @@ export default function FamilyDetailScreen() {
           </View>
         </RNModal>
 
-        {/* Confirm Leave/Delete Family Modal */}
         <RNModal
           isVisible={confirmFamilyModal}
           onBackdropPress={() => setConfirmFamilyModal(false)}

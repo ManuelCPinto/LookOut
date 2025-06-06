@@ -1,4 +1,5 @@
 // components/Header.tsx
+
 import React from "react";
 import {
   StatusBar,
@@ -16,6 +17,10 @@ import Animated from "react-native-reanimated";
 import { useHeader } from "@/hooks/common/useHeader";
 import { router } from "expo-router";
 
+// → Import the “useUserFamilies” hook:
+import { useUserFamilies } from "@/hooks/family/useUserFamilies";
+import { auth } from "@/lib/firebase";
+
 export default function Header() {
   const {
     title,
@@ -29,6 +34,11 @@ export default function Header() {
     dividerStyle,
   } = useHeader();
 
+  // ─── Fetch current user’s families; we’ll grab the “first” family ID:
+  const uid = auth.currentUser!.uid;
+  const { families } = useUserFamilies(uid);
+  const firstFamilyId = families[0]?.id; // may be undefined if they have no family
+
   const drawerWidth = Dimensions.get("window").width * 0.75;
   const topPadding =
     Platform.OS === "ios" ? 50 : (StatusBar.currentHeight ?? 0) + 10;
@@ -41,7 +51,7 @@ export default function Header() {
         barStyle="light-content"
       />
 
-      {/* Top bar with flat purple and rounded bottom */}
+      {/* Top bar (purple) */}
       <View
         style={{
           backgroundColor: "#4F46E5",
@@ -182,7 +192,10 @@ export default function Header() {
                 activeOpacity={0.7}
                 onPress={() => {
                   toggle();
-                  router.push("/family");
+                  if (firstFamilyId) {
+                    router.push(`/family/${firstFamilyId}`);
+                  } else {
+                  }
                 }}
               >
                 <Feather name="users" size={20} color="#4F46E5" />
@@ -216,9 +229,7 @@ export default function Header() {
                 className="flex-row items-center py-3"
                 activeOpacity={0.7}
                 onPress={() => {
-                  toggle();
-                  router.push("/notifications");
-                }}
+                  toggle();                }}
               >
                 <Feather name="bell" size={20} color="#4F46E5" />
                 <Text className="ml-4 text-base">
@@ -237,9 +248,7 @@ export default function Header() {
                 className="flex-row items-center py-3"
                 activeOpacity={0.7}
                 onPress={() => {
-                  toggle();
-                  router.push("/help");
-                }}
+                  toggle();                }}
               >
                 <Feather name="help-circle" size={20} color="#4F46E5" />
                 <Text className="ml-4 text-base ">
@@ -251,9 +260,7 @@ export default function Header() {
                 className="flex-row items-center py-3"
                 activeOpacity={0.7}
                 onPress={() => {
-                  toggle();
-                  router.push("/settings/theme");
-                }}
+                  toggle();                }}
               >
                 <Feather name="sun" size={20} color="#4F46E5" />
                 <Text className="ml-4 text-base ">
@@ -265,9 +272,7 @@ export default function Header() {
                 className="flex-row items-center py-3"
                 activeOpacity={0.7}
                 onPress={() => {
-                  toggle();
-                  router.push("/about");
-                }}
+                  toggle();                }}
               >
                 <Feather name="info" size={20} color="#4F46E5" />
                 <Text className="ml-4 text-base">
@@ -277,7 +282,7 @@ export default function Header() {
             </View>
 
             {/* Sign Out */}
-            <View className="h-px mx-4 my-4 color="/>
+            <View className="h-px mx-4 my-4 bg-gray-200" />
             <TouchableOpacity
               onPress={signOutUser}
               disabled={signingOut}

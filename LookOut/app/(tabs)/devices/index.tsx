@@ -1,5 +1,3 @@
-// app/(tabs)/devices/index.tsx
-
 import React, { useState, useCallback, useRef } from "react";
 import {
   SafeAreaView,
@@ -48,7 +46,6 @@ export default function DevicesScreen() {
     setTimeout(() => setRefreshing(false), 800);
   }, []);
 
-  // ─── Sort & filter personal devices ───
   const raw = personalDevices
     .slice()
     .sort((a, b) =>
@@ -63,17 +60,14 @@ export default function DevicesScreen() {
       (statusFilter === "all" ? true : d.status === statusFilter)
   );
 
-  // ─── Floating “+” Button (navigates to add device) ───
   const addBtnRef = useRef<any>(null);
   const handleAddPress = () => {
     addBtnRef.current?.bounce(300);
     router.push("/devices/add");
   };
 
-  // ─── “Go to Family” (pass `familyId` as param) ───
   const goToFamily = useCallback(() => {
     if (hasFamily) {
-      // push to the new family route, attaching ?familyId=<id>
       router.push({
         pathname: "/devices/family",
         params: { familyId },
@@ -94,14 +88,11 @@ export default function DevicesScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Scope Toggle: “Mine” / “Family” ── */}
         <Animatable.View animation="fadeIn" className="flex-row mb-4">
-          {/* “Mine” is always active (we are on the personal screen) */}
           <Pressable className="flex-1 mx-1 px-4 py-2 rounded-full bg-[#4F46E5]">
             <Text className="font-medium text-center text-white">Mine</Text>
           </Pressable>
 
-          {/* “Family” toggles into the family screen; disabled if no family */}
           <Pressable
             onPress={goToFamily}
             disabled={!hasFamily}
@@ -140,10 +131,7 @@ export default function DevicesScreen() {
           <Animatable.View key={d.id} animation="fadeInUp" delay={i * 80}>
             <Pressable
               onPress={() => setSelected(d)}
-              className={`flex-row items-center bg-white rounded-2xl shadow p-6 mb-4 ${
-                i === 0 ? "border-l-4 border-[#4F46E5]" : ""
-              }`}
-            >
+              className={"flex-row items-center bg-white rounded-2xl shadow p-6 mb-4 border-l-4 border-[#4F46E5]"}>
               <Image
                 source={require("@/assets/camera.png")}
                 className="w-12 h-12"

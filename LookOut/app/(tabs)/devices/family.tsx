@@ -180,15 +180,11 @@ export default function FamilyDevicesScreen() {
             </Text>
           </View>
         ) : (
-          /* ── Otherwise, render the family devices ── */
           filtered.map((d, i) => (
             <Animatable.View key={d.id} animation="fadeInUp" delay={i * 80}>
               <Pressable
                 onPress={() => setSelected(d)}
-                className={`flex-row items-center bg-white rounded-2xl shadow p-6 mb-4 ${
-                  i === 0 ? "border-l-4 border-[#4F46E5]" : ""
-                }`}
-              >
+                className={"flex-row items-center bg-white rounded-2xl shadow p-6 mb-4 border-l-4 border-[#4F46E5]"}>
                 <Image
                   source={require("@/assets/camera.png")}
                   className="w-12 h-12"
