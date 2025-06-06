@@ -8,7 +8,7 @@ extern FirebaseData fbdo;
 
 extern const char *FIREBASE_PROJECT;
 
-bool loadFirebase(const char *apiKey, const std::string &email = "", const std::string &password = "")
+bool loadFirebase(const char *apiKey, const std::string email, const std::string password)
 {
   config.api_key = apiKey;
 

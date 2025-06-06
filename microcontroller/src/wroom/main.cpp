@@ -15,7 +15,8 @@
 
 using namespace std;
 
-static const int MIN_ULTRASONIC_DISTANCE = 10;
+static const int MAX_ULTRASONIC_DISTANCE = 10;
+static volatile bool isSomeoneClose = false;
 
 static volatile bool initialOledReceived = false;
 
@@ -83,7 +84,7 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
   if (strcmp(topic, OledData::TOPIC) == 0)
   {
     initialOledReceived = true;
-    StaticJsonDocument<256> doc;
+    JsonDocument doc;
     DeserializationError err = deserializeJson(doc, payload, length);
     if (!err)
     {
@@ -157,8 +158,10 @@ void loopScanFingerprint()
 void loopUltrasonicSensor()
 {
   float distance = fetchDistance();
-  if (distance > MIN_ULTRASONIC_DISTANCE)
+  if (distance <= MAX_ULTRASONIC_DISTANCE && !isSomeoneClose)
   {
+    isSomeoneClose = true;
+
     UltrasonicData newFingerprintData = {true};
 
     JsonDocument json;
@@ -167,6 +170,10 @@ void loopUltrasonicSensor()
     size_t jsonLen = serializeJson(json, jsonBuffer);
 
     publishMQTT(string(WROVER_UNIQUE_ID + string("/sensor/ultrasonic")).c_str(), jsonBuffer, jsonLen);
+  }
+  else
+  {
+    isSomeoneClose = false;
   }
 }
 

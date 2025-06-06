@@ -46,7 +46,7 @@ void clearDisplay()
   display.display();
 }
 
-void displayText(const char *text, int duration = 0)
+void displayText(const char *text, int duration)
 {
   display.clearDisplay();
 
@@ -64,7 +64,7 @@ void displayText(const char *text, int duration = 0)
   }
 }
 
-void displayQRCode(const char *qrCodeMsg, const char *text, int duration = 0)
+void displayQRCode(const char *qrCodeMsg, const char *text, int duration)
 {
   display.clearDisplay();
 

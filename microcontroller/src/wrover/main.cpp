@@ -103,9 +103,9 @@ void setup()
   Serial.println("Loading camera...");
   loadCamera();
   Serial.println("Loading Firebase...");
-  loadFirebase(FIREBASE_API_KEY);
-  //Serial.println("Loading Supabase...");
-  //loadSupabase(SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_USERNAME, SUPABASE_PASSWORD);
+  loadFirebase(FIREBASE_API_KEY, FIREBASE_EMAIL, FIREBASE_PASSWORD);
+  Serial.println("Loading Supabase...");
+  loadSupabase(SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_USERNAME, SUPABASE_PASSWORD);
   Serial.println("Loading MQTT...");
   loadMQTT(MQTT_SERVER, MQTT_PORT, mqttCallback);
 
