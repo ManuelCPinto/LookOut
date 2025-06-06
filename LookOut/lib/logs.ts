@@ -7,7 +7,6 @@ import {
   onSnapshot,
   Timestamp,
   Unsubscribe,
-  getDoc,
   DocumentData,
   deleteDoc,
 } from "firebase/firestore";
@@ -24,36 +23,32 @@ export enum LogType {
 export type Log = {
   id: string;
   deviceId: string;
+  deviceName: string;
   photoURL: string;
   type: LogType;       
   createdAt: Timestamp;
-  userId: string;      
+  userId: string;
 };
 
 /**
- * Subscribe in real‐time to all logs whose `deviceId` is one of the user's owned device IDs,
- * and whose `createdAt` is between `start` and `end`.
- *
- * @param deviceIds  – an array of device IDs that this user owns (max length 10 for Firestore “in” queries)
- * @param start      – start date (inclusive)
- * @param end        – end date (inclusive)
- * @param cb         – callback(logs: Log[]) whenever they change
- * @returns          – a Firestore unsubscribe function
+ * Subscribe in real-time to logs for any of the given device IDs in the date range.
+ * 
+ * Firestore requires that you create a composite index on (deviceId, createdAt) for this to work.
  */
-export function subscribeLogsForDevicesInRange(
+export function subscribeLogsByDeviceIDsInRange(
   deviceIds: string[],
   start: Date,
   end: Date,
   cb: (logs: Log[]) => void
 ): Unsubscribe {
-  const logsCol = collection(db, "logs");
-  const startTs = Timestamp.fromDate(start);
-  const endTs   = Timestamp.fromDate(end);
-  if (deviceIds.length === 0) {
+  if (!deviceIds || deviceIds.length === 0) {
     cb([]);
     return () => {};
   }
 
+  const logsCol = collection(db, "logs");
+  const startTs = Timestamp.fromDate(start);
+  const endTs   = Timestamp.fromDate(end);
   const q = query(
     logsCol,
     where("deviceId", "in", deviceIds),
@@ -67,6 +62,7 @@ export function subscribeLogsForDevicesInRange(
       const d = docSnap.data() as DocumentData;
       return {
         id:        docSnap.id,
+        deviceName: d.deviceName,
         deviceId:  d.deviceId,
         photoURL:  d.photoURL,
         type:      d.type as LogType,
@@ -78,55 +74,46 @@ export function subscribeLogsForDevicesInRange(
   });
 }
 
-/**
- * Fetch a single device’s name by ID.
- */
-export async function fetchDeviceById(deviceId: string): Promise<{ name: string } | null> {
-  const ref = doc(db, "devices", deviceId);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return null;
-  const data = snap.data() as DocumentData;
-  return {
-    name: data.name || "Unknown Device",
-  };
-}
 
 /**
- * Given a LogType enum, return an Ionicons name + a short human label.
+ * Delete one log by ID.
  */
-export function getLogIconAndLabel(logType: LogType): {
-  iconName: React.ComponentProps<typeof Ionicons>["name"];
-  label:    string;
-} {
+export async function deleteLog(logId: string): Promise<void> {
+  await deleteDoc(doc(db, "logs", logId));
+}
+
+
+/**
+ * Given a LogType enum, return an Ionicons name + a short label.
+ */
+export function getLogIconAndLabel(
+  logType: LogType
+): { iconName: React.ComponentProps<typeof Ionicons>["name"]; label: string } {
   switch (logType) {
     case LogType.RING_DOORBELL:
       return {
         iconName: "notifications-outline",
-        label:    "Doorbell rang",
+        label: "Doorbell rang",
       };
     case LogType.USER_REQUEST:
       return {
         iconName: "camera-outline",
-        label:    "Snapshot taken",
+        label: "Snapshot taken",
       };
     case LogType.PROXIMITY:
       return {
         iconName: "walk-outline",
-        label:    "Motion detected",
+        label: "Motion detected",
       };
     case LogType.NEW_FINGERPRINT:
       return {
         iconName: "finger-print-outline",
-        label:    "Fingerprint scanned",
+        label: "Fingerprint scanned",
       };
     default:
       return {
         iconName: "help-circle-outline",
-        label:    "Unknown event",
+        label: "Unknown event",
       };
   }
-}
-
-export async function deleteLog(logId: string): Promise<void> {
-  await deleteDoc(doc(db, "logs", logId));
 }

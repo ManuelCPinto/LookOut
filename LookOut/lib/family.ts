@@ -15,24 +15,28 @@ import {
   DocumentData,
   updateDoc,
   deleteField,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 import { db } from "./firebase";
+import { Device } from "./devices";
 
 export type Role = "Owner" | "Member" | "Guest";
 
 export interface Family {
-  id:        string;               // Document ID
-  name:      string;               // Family display name
-  ownerId:   string;               // UID of the owner user
-  createdAt: Timestamp;            // When the family was created
-  roles:     Record<string, Role>; // Map from UID → role
+  id:        string;               
+  name:      string;               
+  ownerId:   string;               
+  createdAt: Timestamp;           
+  roles:     Record<string, Role>; 
+  devices: string[];               
 }
 
 export interface Invite {
-  code:      string;    // Document ID (invite code)
-  familyID:  string;    // Family this invite belongs to
-  createdAt: Timestamp; // When the invite was created
-  expireAt: Timestamp; // When the invite expires
+  code:      string;    
+  familyID:  string;    
+  createdAt: Timestamp; 
+  expireAt: Timestamp;
 }
 
 export const ROLE_COLORS: Record<Role, string> = {
@@ -71,6 +75,7 @@ export async function createFamilyApi(
     description: trimmedDesc,
     ownerId,
     roles:       { [ownerId]: "Owner" },
+    devices:   [],
     createdAt:   serverTimestamp(),
   });
 
@@ -83,6 +88,7 @@ export async function createFamilyApi(
     ownerId:   data.ownerId,
     createdAt: data.createdAt,
     roles:     data.roles,
+    devices:   data.devices ?? [],
   };
 }
 
@@ -303,4 +309,95 @@ export async function transferOwnership(
   });
 
   await batch.commit();
+}
+
+/**
+ * Adds a given device ID to the family's `devices` array.
+ *
+ * @param familyId  the ID of the family document
+ * @param deviceId  the device ID to push into that family's devices
+ */
+export async function addDeviceToFamily(
+  familyId: string,
+  deviceId: string
+): Promise<void> {
+  const famRef = doc(familiesCol, familyId);
+  await updateDoc(famRef, {
+    devices: arrayUnion(deviceId),
+  });
+}
+
+/**
+ * (Optional) Remove a device ID from a family's array
+ *
+ * @param familyId 
+ * @param deviceId 
+ */
+export async function removeDeviceFromFamily(
+  familyId: string,
+  deviceId: string
+): Promise<void> {
+  const famRef = doc(familiesCol, familyId);
+  await updateDoc(famRef, {
+    devices: (docData: any) => {
+      return arrayRemove(deviceId);
+    },
+  });
+}
+
+/**
+ * Listen in real time to devices whose IDs appear in the family's `devices` array.
+ *
+ * Whenever the family's document changes (e.g. devices added/removed),
+ * we tear down the previous listener and re‐subscribe to the new set of IDs.
+ *
+ * @param familyId 
+ * @param cb – callback invoked with an array of Device objects
+ * @returns      – an Unsubscribe function that stops all listeners
+ */
+export function subscribeFamilyDevices(
+  familyId: string,
+  cb: (devices: Device[]) => void
+): Unsubscribe {
+  const famRef = doc(familiesCol, familyId);
+  let devicesUnsub: Unsubscribe | null = null;
+  const cleanupInner = () => {
+    if (devicesUnsub) {
+      devicesUnsub();
+      devicesUnsub = null;
+    }
+  };
+  const familyUnsub = onSnapshot(famRef, (famSnap) => {
+    if (!famSnap.exists()) {
+      cleanupInner();
+      cb([]);
+      return;
+    }
+
+    const famData = famSnap.data() as DocumentData;
+    const devices: string[] = Array.isArray(famData.devices) ? famData.devices : [];
+    cleanupInner();
+
+    if (devices.length === 0) {
+      cb([]);
+      return;
+    }
+    const q = query(
+      collection(db, "devices"),
+      where("__name__", "in", devices)
+    );
+
+    devicesUnsub = onSnapshot(q, (snap) => {
+      const list: Device[] = snap.docs.map((d) => ({
+        id:            d.id,
+        ...(d.data() as any),
+      }));
+      cb(list);
+    });
+  });
+
+  return () => {
+    cleanupInner();
+    familyUnsub();
+  };
 }

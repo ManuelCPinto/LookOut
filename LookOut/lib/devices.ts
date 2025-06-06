@@ -119,24 +119,7 @@ export function subscribeUserDevices(
   userId: string,
   cb: (devices: Device[]) => void
 ): Unsubscribe {
-  const q = query(devicesCol, where("ownerType", "==", "user"), where("ownerId", "==", userId));
-  return onSnapshot(q, (snap) => {
-    const list = snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) } as Device));
-    cb(list);
-  });
-}
-
-/**
- * Listen in real time to devices owned by a given family.
- * @param familyId 
- * @param cb 
- * @returns 
- */
-export function subscribeFamilyDevices(
-  familyId: string,
-  cb: (devices: Device[]) => void
-): Unsubscribe {
-  const q = query(devicesCol, where("ownerType", "==", "family"), where("ownerId", "==", familyId));
+  const q = query(devicesCol, where("ownerId", "==", userId));
   return onSnapshot(q, (snap) => {
     const list = snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) } as Device));
     cb(list);

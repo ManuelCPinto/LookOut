@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { subscribeFamilyDevices, Device } from "@/lib/devices";
+import { Device } from "@/lib/devices";
+import {subscribeFamilyDevices} from "@/lib/family"
 
 /**
  * Subscribes in real-time to all devices owned by the given familyId.

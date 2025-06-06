@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   SafeAreaView,
   View,
@@ -9,24 +9,39 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import * as Animatable from "react-native-animatable";
 import CalendarScreen from "./calendar";
-import LogDetailModal, { Event } from "./LogDetailModal";
-import useLogsInRange from "@/hooks/logs/useLogsInRange";
-import { auth } from "@/lib/firebase";
-import {
-  LogType,
-  getLogIconAndLabel,
-  deleteLog,
-} from "@/lib/logs";
+import LogDetailModal, { Event as DetailEvent } from "./LogDetailModal";
 import RNModal from "react-native-modal";
 
+import { auth } from "@/lib/firebase";
+import { deleteLog, getLogIconAndLabel, LogType } from "@/lib/logs";
+import { useLogsForDeviceIDs, Event } from "@/hooks/logs/useLogsForDeviceIDs";
+import { useUserDevices, useFamilyDevices } from "@/hooks/devices";
+import { useUserFamilies } from "@/hooks/family/useUserFamilies";
+import { useHasRole } from "@/hooks/user/useHasRole";
+
 export default function LogsScreen() {
-  const ownerId = auth.currentUser!.uid;
-  const [rangeStart, setRangeStart] = useState(() => {
+  const uid = auth.currentUser!.uid;
+  const { families } = useUserFamilies(uid);
+  const familyId     = families[0]?.id;
+
+  const isAtLeastMember = useHasRole(familyId, uid, "Member");
+
+  const personalDevices = useUserDevices();                  
+  const personalIds     = personalDevices.map((d) => d.id);
+
+  const allFamilyDevices = useFamilyDevices(familyId);       
+  const familyIds        = allFamilyDevices.map((d) => d.id);
+
+  const allowedFamilyIds = isAtLeastMember ? familyIds : [];
+  const mergedSet       = new Set<string>([...personalIds, ...allowedFamilyIds]);
+  const allDeviceIds    = Array.from(mergedSet);
+  
+  const [rangeStart, setRangeStart] = useState<Date>(() => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     return d;
   });
-  const [rangeEnd, setRangeEnd] = useState(() => {
+  const [rangeEnd, setRangeEnd] = useState<Date>(() => {
     const d = new Date();
     d.setHours(23, 59, 59, 999);
     return d;
@@ -36,11 +51,6 @@ export default function LogsScreen() {
   );
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [listKey, setListKey] = useState(`today-${Date.now()}`);
-  const allEvents: Event[] = useLogsInRange(rangeStart, rangeEnd);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [selectionMode, setSelectionMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [confirmBulkDeleteVisible, setConfirmBulkDeleteVisible] = useState(false);
 
   const pickToday = useCallback(() => {
     const s = new Date();
@@ -97,6 +107,32 @@ export default function LogsScreen() {
       ? "Last 7 Days"
       : `${fmt(rangeStart)} – ${fmt(rangeEnd)}`;
 
+  const allEvents: Event[] = useLogsForDeviceIDs(
+    allDeviceIds,
+    rangeStart,
+    rangeEnd
+  );
+
+  const deviceNameMap = useMemo(() => {
+    const m = new Map<string, string>();
+
+    personalDevices.forEach((d) => {
+      m.set(d.id, d.name);
+    });
+
+    allFamilyDevices.forEach((d) => {
+      m.set(d.id, d.name);
+    });
+
+    return m;
+  }, [personalDevices, allFamilyDevices]);
+
+  const [selectedEvent, setSelectedEvent] = useState<DetailEvent | null>(null);
+  const [selectionMode, setSelectionMode]       = useState(false);
+  const [selectedIds, setSelectedIds]           = useState<string[]>([]);
+  const [confirmBulkDeleteVisible, setConfirmBulkDeleteVisible] =
+    useState(false);
+
   const toggleSelectionMode = useCallback(() => {
     if (selectionMode) {
       if (selectedIds.length > 0) {
@@ -134,17 +170,21 @@ export default function LogsScreen() {
   }) => {
     const { iconName, label } = getLogIconAndLabel(item.type as LogType);
 
+    const humanName = deviceNameMap.get(item.deviceId) ?? item.deviceId;
+
     const onPressRow = () => {
       if (selectionMode) {
-        setSelectedIds((prev) => {
-          if (prev.includes(item.id)) {
-            return prev.filter((x) => x !== item.id);
-          } else {
-            return [...prev, item.id];
-          }
-        });
+        setSelectedIds((prev) =>
+          prev.includes(item.id)
+            ? prev.filter((x) => x !== item.id)
+            : [...prev, item.id]
+        );
       } else {
-        setSelectedEvent(item);
+        const detail: DetailEvent = {
+          ...item,
+          deviceName: humanName,
+        };
+        setSelectedEvent(detail);
       }
     };
 
@@ -183,7 +223,7 @@ export default function LogsScreen() {
 
           <View className="flex-1 ml-4">
             <Text className="font-medium text-gray-800">
-              {label} on {item.deviceName}
+              {label} on {humanName}
             </Text>
             <Text className="mt-1 text-sm text-gray-500">
               {item.time.toLocaleString([], {
@@ -262,6 +302,7 @@ export default function LogsScreen() {
           />
         </Pressable>
       </View>
+
       <FlatList
         key={listKey}
         data={allEvents}
@@ -274,7 +315,7 @@ export default function LogsScreen() {
         )}
         renderItem={renderItem}
       />
-
+      
       {calendarOpen && (
         <CalendarScreen
           initialStart={rangeStart}
@@ -290,7 +331,7 @@ export default function LogsScreen() {
           visible={Boolean(selectedEvent)}
           onClose={() => setSelectedEvent(null)}
           onDelete={(id) => {
-            console.log("deleted", id);
+            deleteLog(id).catch((e) => console.warn("delete failed:", e));
             setSelectedEvent(null);
           }}
         />
@@ -305,7 +346,8 @@ export default function LogsScreen() {
       >
         <View className="p-6 bg-white rounded-2xl">
           <Text className="mb-4 text-lg font-semibold">
-            Delete {selectedIds.length} {selectedIds.length === 1 ? "log" : "logs"}?
+            Delete {selectedIds.length}{" "}
+            {selectedIds.length === 1 ? "log" : "logs"}?
           </Text>
           <Text className="mb-6 text-gray-700">
             Are you sure you want to delete these {selectedIds.length}{" "}
