@@ -6,6 +6,7 @@
 using namespace std;
 
 static const int BUZZER_PIN = 15;
+static const int LED_PIN = 2;
 
 /**
  * Beeps the buzzer connected to the specified pin for the given duration.

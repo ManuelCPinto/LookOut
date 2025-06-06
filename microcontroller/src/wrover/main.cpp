@@ -137,6 +137,7 @@ void setup()
 {
   Serial.begin(9600);
   pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
 
   Serial.println("Loading WiFi...");
   connectWifi(WIFI_SSID, WIFI_PASSWORD);

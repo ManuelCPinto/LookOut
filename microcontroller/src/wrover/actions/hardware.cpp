@@ -13,7 +13,7 @@
 #include <ArduinoJson.h>
 #include <Firebase_ESP_Client.h>
 #include <fmt/core.h>
-#include <time.h>  
+#include <time.h>
 
 using namespace std;
 
@@ -28,8 +28,11 @@ FirebaseData fbdo;
 void beep(uint32_t duration)
 {
   digitalWrite(BUZZER_PIN, HIGH);
+  digitalWrite(LED_PIN, HIGH);
   buzzerTimeoutTimer.once_ms(duration, []()
-                             { digitalWrite(BUZZER_PIN, LOW); });
+                             {
+                              digitalWrite(BUZZER_PIN, LOW);
+                              digitalWrite(LED_PIN, LOW); });
 }
 
 void takePhotoToSupabase(const char *bucket, const char *folderName, function<void(string photoURL, time_t timestamp)> callback)
@@ -141,14 +144,14 @@ void logToFirebase(const char *deviceId, LogData logData)
 
   // 3) Write to Firestore under collection “logs”, with an auto‐generated document ID:
   if (! Firebase.Firestore.createDocument(
-         &fbdo,
-         FIREBASE_PROJECT,
+          &fbdo,
+          FIREBASE_PROJECT,
          "",       // default database
          "logs",   // collection path
          "",       // empty → auto‐ID
-         payload.c_str(),
+          payload.c_str(),
          ""        // no field mask
-       ))
+          ))
   {
     Serial.printf("Firestore.createDocument failed: %s\n",
                   fbdo.errorReason().c_str());
@@ -165,7 +168,7 @@ bool deviceHasOwner(const char *nodeId)
   path.concat(nodeId);
   if (!Firebase.Firestore.getDocument(&fbdo, FIREBASE_PROJECT, "", path.c_str())) {
     Serial.printf("getDocument failed: %s\n", fbdo.errorReason().c_str());
-    return false; 
+    return false;
   }
   if (fbdo.httpCode() != 200) {
     Serial.printf("HTTP %d on getDocument for %s\n", fbdo.httpCode(), path.c_str());
@@ -227,7 +230,7 @@ void showFingerprintPrompt() {
   StaticJsonDocument<128> jd;
   jd["message"]   = "Place your finger on the sensor";
   jd["isQrCode"]  = false;
-  String out; 
+  String out;
   serializeJson(jd, out);
-  sendOled(out.c_str());  
+  sendOled(out.c_str());
 }
