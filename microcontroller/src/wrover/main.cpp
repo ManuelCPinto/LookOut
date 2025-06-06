@@ -14,11 +14,11 @@
 #include <fmt/core.h>
 
 using namespace std;
-static const unsigned long OWNER_POLL_INTERVAL        = 5000UL;
-static const unsigned long REGISTRATION_RETRY_DELAY   = 500UL; 
+static const unsigned long OWNER_POLL_INTERVAL = 5000UL;
+static const unsigned long REGISTRATION_RETRY_DELAY = 500UL;
 
-static const unsigned long WELCOME_BROADCAST_INTERVAL = 5000UL; 
-static const unsigned long WELCOME_RETRY_DELAY        = 500UL;  
+static const unsigned long WELCOME_BROADCAST_INTERVAL = 5000UL;
+static const unsigned long WELCOME_RETRY_DELAY = 500UL;
 
 static char pendingUserId[33] = {0};
 String MQTT_TOPICS[] = {
@@ -26,8 +26,7 @@ String MQTT_TOPICS[] = {
     UltrasonicData::TOPIC,
     FingerprintData::TOPIC,
     TAKE_PHOTO_TOPIC,
-    OledData::TOPIC
-};
+    OledData::TOPIC};
 const size_t MQTT_TOPIC_COUNT = sizeof(MQTT_TOPICS) / sizeof(MQTT_TOPICS[0]);
 String *fullTopics;
 
@@ -35,97 +34,101 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
 {
   StaticJsonDocument<256> docIn;
   DeserializationError err = deserializeJson(docIn, payload, length);
-  if (err) return;
+  if (err)
+    return;
 
   string prefix = string(WROVER_UNIQUE_ID) + "/";
   if (strncmp(topic, prefix.c_str(), prefix.length()) != 0)
     return;
   topic += prefix.length();
 
-  if (strcmp(topic, BuzzerData::TOPIC) == 0) {
+  if (strcmp(topic, BuzzerData::TOPIC) == 0)
+  {
     BuzzerData b = BuzzerData::fromJson(docIn);
     beep(b.duration);
     return;
   }
 
-  if (strcmp(topic, UltrasonicData::TOPIC) == 0) {
+  if (strcmp(topic, UltrasonicData::TOPIC) == 0)
+  {
     UltrasonicData u = UltrasonicData::fromJson(docIn);
-    if (u.isClose) {
+    if (u.isClose)
+    {
       takePhotoToSupabase(
-        SUPABASE_BUCKET,
-        WROVER_UNIQUE_ID,
-        [&](string photoURL, time_t timestamp){
-          LogData logData = {
-            LogType::PROXIMITY,
-            timestamp,
-            photoURL.c_str(),
-            ""         
-          };
-          logToFirebase(WROVER_UNIQUE_ID, logData);
-        }
-      );
-    }
-    return;
-  }
-
-  if (strcmp(topic, FingerprintData::TOPIC) == 0) {
-    FingerprintData fpd = FingerprintData::fromJson(docIn);
-    switch (fpd.type) {
-      case FINGERPRINT_UPDATE:
-        if (fpd.isNew) {
-          addFingerprintUserToFirebase(WROVER_UNIQUE_ID, fpd.userId);
-        }
-        break;
-      case FINGERPRINT_TOUCH:
-        beep(2000);
-        takePhotoToSupabase(
           SUPABASE_BUCKET,
           WROVER_UNIQUE_ID,
-          [=](string photoURL, time_t timestamp){
-        LogData logData = {
-          LogType::RING_DOORBELL,
-          timestamp,
-          photoURL.c_str(),
-          fpd.userId       
-        };
+          [&](string photoURL, time_t timestamp)
+          {
+            LogData logData = {
+                LogType::PROXIMITY,
+                timestamp,
+                photoURL.c_str(),
+                ""};
             logToFirebase(WROVER_UNIQUE_ID, logData);
-          }
-        );
-        break;
-      case FINGERPRINT_REGISTRATION:
-        publishMQTT(
-          (string(WROOM_UNIQUE_ID) + "/" + FingerprintData::TOPIC).c_str(),
-          payload,
-          length
-        );
-        break;
+          });
     }
     return;
   }
 
-  if (strcmp(topic, TAKE_PHOTO_TOPIC) == 0) {
-    takePhotoToSupabase(
-      SUPABASE_BUCKET,
-      WROVER_UNIQUE_ID,
-      [=](string photoURL, time_t timestamp){
-        LogData logData = {
-          LogType::USER_REQUEST,
-          timestamp,
-          photoURL.c_str(),
-          ""       
-        };
-        logToFirebase(WROVER_UNIQUE_ID, logData);
+  if (strcmp(topic, FingerprintData::TOPIC) == 0)
+  {
+    FingerprintData fpd = FingerprintData::fromJson(docIn);
+    switch (fpd.type)
+    {
+    case FINGERPRINT_UPDATE:
+      if (fpd.isNew)
+      {
+        addFingerprintUserToFirebase(WROVER_UNIQUE_ID, fpd.userId);
       }
-    );
+      break;
+    case FINGERPRINT_TOUCH:
+      beep(2000);
+      takePhotoToSupabase(
+          SUPABASE_BUCKET,
+          WROVER_UNIQUE_ID,
+          [=](string photoURL, time_t timestamp)
+          {
+            LogData logData = {
+                LogType::RING_DOORBELL,
+                timestamp,
+                photoURL.c_str(),
+                fpd.userId};
+            logToFirebase(WROVER_UNIQUE_ID, logData);
+          });
+      break;
+    case FINGERPRINT_REGISTRATION:
+      publishMQTT(
+          (string(WROOM_UNIQUE_ID) + "/" + FingerprintData::TOPIC).c_str(),
+          payload,
+          length);
+      break;
+    }
     return;
   }
 
-  if (strcmp(topic, OledData::TOPIC) == 0) {
+  if (strcmp(topic, TAKE_PHOTO_TOPIC) == 0)
+  {
+    takePhotoToSupabase(
+        SUPABASE_BUCKET,
+        WROVER_UNIQUE_ID,
+        [=](string photoURL, time_t timestamp)
+        {
+          LogData logData = {
+              LogType::USER_REQUEST,
+              timestamp,
+              photoURL.c_str(),
+              ""};
+          logToFirebase(WROVER_UNIQUE_ID, logData);
+        });
+    return;
+  }
+
+  if (strcmp(topic, OledData::TOPIC) == 0)
+  {
     publishMQTT(
-      (string(WROOM_UNIQUE_ID) + "/" + OledData::TOPIC).c_str(),
-      payload,
-      length
-    );
+        (string(WROOM_UNIQUE_ID) + "/" + OledData::TOPIC).c_str(),
+        payload,
+        length);
     return;
   }
 }
@@ -145,7 +148,7 @@ void setup()
   loadCamera();
 
   Serial.println("Loading Firebase...");
-  loadFirebase(FIREBASE_API_KEY);
+  loadFirebase(FIREBASE_API_KEY, FIREBASE_EMAIL, FIREBASE_PASSWORD);
 
   Serial.println("Loading Supabase...");
   loadSupabase(SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_USERNAME, SUPABASE_PASSWORD);
@@ -154,10 +157,9 @@ void setup()
   loadMQTT(MQTT_SERVER, MQTT_PORT, mqttCallback);
 
   fullTopics = addPrefixToTopics(
-    fmt::format("{}/", WROVER_UNIQUE_ID).c_str(),
-    MQTT_TOPICS,
-    MQTT_TOPIC_COUNT
-  );
+      fmt::format("{}/", WROVER_UNIQUE_ID).c_str(),
+      MQTT_TOPICS,
+      MQTT_TOPIC_COUNT);
 
   Serial.println("------------------");
   Serial.printf("Unique ID: %s\n", WROVER_UNIQUE_ID);
@@ -168,17 +170,16 @@ void setup()
   {
     while (!deviceHasOwner(WROVER_UNIQUE_ID))
     {
-      showRegistrationPrompt();   
+      showRegistrationPrompt();
       unsigned long start = millis();
       while (millis() - start < OWNER_POLL_INTERVAL)
       {
         loopMQTT(
-          WROVER_UNIQUE_ID,
-          MQTT_USERNAME,
-          MQTT_PASSWORD,
-          fullTopics,
-          MQTT_TOPIC_COUNT
-        );
+            WROVER_UNIQUE_ID,
+            MQTT_USERNAME,
+            MQTT_PASSWORD,
+            fullTopics,
+            MQTT_TOPIC_COUNT);
         delay(50);
       }
     }
@@ -192,12 +193,11 @@ void loop()
   showFingerprintPrompt();
 
   loopMQTT(
-    WROVER_UNIQUE_ID,
-    MQTT_USERNAME,
-    MQTT_PASSWORD,
-    fullTopics,
-    MQTT_TOPIC_COUNT
-  );
+      WROVER_UNIQUE_ID,
+      MQTT_USERNAME,
+      MQTT_PASSWORD,
+      fullTopics,
+      MQTT_TOPIC_COUNT);
 
   delay(2000);
 }

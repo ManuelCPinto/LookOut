@@ -13,7 +13,7 @@ extern const char* WROOM_UNIQUE_ID;
 extern const char* WROVER_UNIQUE_ID;
 
 extern const char* FIREBASE_API_KEY;
-extern const char* FIREBASE_DATABASE_URL;
+extern const char* FIREBASE_PROJECT;
 extern const char* FIREBASE_EMAIL;
 extern const char* FIREBASE_PASSWORD;
 

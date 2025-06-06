@@ -29,4 +29,16 @@ char *macToString(uint8_t mac[6]);
  */
 String* addPrefixToTopics(const String& prefix, const String topics[], int numTopics);
 
+/**
+ * Wraps text to fit within a specified width and height.
+ *
+ * @param text The text to wrap.
+ * @param x The x-coordinate for the text.
+ * @param y The y-coordinate for the text.
+ * @param width The maximum width of the text area.
+ * @param height The maximum height of the text area.
+ * @param callback A function to call with each wrapped line of text.
+ */
+void wrapText(const std::string &text, int x, int y, int width, int height, std::function<void(const char *text, int lineOffset)> callback);
+
 #endif
