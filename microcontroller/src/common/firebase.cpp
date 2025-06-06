@@ -8,14 +8,14 @@ extern FirebaseData fbdo;
 
 extern const char *FIREBASE_PROJECT;
 
-bool loadFirebase(const char *apiKey, const char *email = nullptr, const char *password = nullptr)
+bool loadFirebase(const char *apiKey)
 {
   config.api_key = apiKey;
 
   Serial.printf("Firebase API Key: %s\n", apiKey);
   Serial.printf("Firestore Project : %s\n\n", FIREBASE_PROJECT);
 
-  if (!Firebase.signUp(&config, &auth, email ? email : "", password ? password : ""))
+  if (!Firebase.signUp(&config, &auth, "", ""))
   {
     Serial.printf("Firebase anon sign-up failed: %s\n",
                   config.signer.signupError.message.c_str());
