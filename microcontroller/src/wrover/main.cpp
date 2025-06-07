@@ -15,9 +15,9 @@
 
 using namespace std;
 static const unsigned long OWNER_POLL_INTERVAL = 5000UL;
-static const unsigned long REGISTRATION_RETRY_DELAY = 500UL;
-
-static const unsigned long WELCOME_BROADCAST_INTERVAL = 5000UL;
+static const unsigned long OWNER_RETRY_DELAY = 50UL;
+static const unsigned long OWNER_TIMEOUT = 30000UL;
+static const unsigned long WELCOME_BROADCAST_MS = 3000UL;
 static const unsigned long WELCOME_RETRY_DELAY = 500UL;
 
 static char pendingUserId[33] = {0};
@@ -29,6 +29,43 @@ String MQTT_TOPICS[] = {
     OledData::TOPIC};
 const size_t MQTT_TOPIC_COUNT = sizeof(MQTT_TOPICS) / sizeof(MQTT_TOPICS[0]);
 String *fullTopics;
+
+bool waitForOwner() {
+  unsigned long start = millis();
+  while (millis() - start < OWNER_TIMEOUT) {
+    showRegistrationPrompt();  
+    unsigned long t0 = millis();
+    while (millis() - t0 < OWNER_POLL_INTERVAL) {
+      loopMQTT(
+        WROVER_UNIQUE_ID,
+        MQTT_USERNAME,
+        MQTT_PASSWORD,
+        fullTopics,
+        MQTT_TOPIC_COUNT
+      );
+      delay(OWNER_RETRY_DELAY);
+    }
+    if (deviceHasOwner(WROVER_UNIQUE_ID)) {
+      Serial.println("→ owner found!");
+      return true;
+    }
+    Serial.println("…still no owner, retrying");
+  }
+  Serial.println("!! owner lookup timed out");
+  return false;
+}
+
+void broadcastWelcome()
+{
+  unsigned long start = millis();
+  while (millis() - start < WELCOME_BROADCAST_MS)
+  {
+    showWelcome();
+    loopMQTT(WROVER_UNIQUE_ID, MQTT_USERNAME, MQTT_PASSWORD,
+             fullTopics, MQTT_TOPIC_COUNT);
+    delay(WELCOME_RETRY_DELAY);
+  }
+}
 
 void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
 {
@@ -52,7 +89,7 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
   if (strcmp(topic, UltrasonicData::TOPIC) == 0)
   {
     UltrasonicData u = UltrasonicData::fromJson(docIn);
-    if (u.isClose)
+    /*if (u.isClose)
     {
       takePhotoToSupabase(
           SUPABASE_BUCKET,
@@ -67,6 +104,7 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
             logToFirebase(WROVER_UNIQUE_ID, logData);
           });
     }
+    */
     return;
   }
 
@@ -79,6 +117,7 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
       if (fpd.isNew)
       {
         addFingerprintUserToFirebase(WROVER_UNIQUE_ID, fpd.userId);
+        Serial.println("Fingerprint Registered...");
       }
       break;
     case FINGERPRINT_TOUCH:
@@ -97,6 +136,8 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
           });
       break;
     case FINGERPRINT_REGISTRATION:
+      Serial.println("Register Fingerprint...");
+      showRegisterPrompt();
       publishMQTT(
           (string(WROOM_UNIQUE_ID) + "/" + FingerprintData::TOPIC).c_str(),
           payload,
@@ -167,38 +208,21 @@ void setup()
   Serial.printf("MAC address: %s\n", WiFi.macAddress());
   Serial.println("------------------");
 
-  if (!deviceHasOwner(WROVER_UNIQUE_ID))
-  {
-    while (!deviceHasOwner(WROVER_UNIQUE_ID))
-    {
-      showRegistrationPrompt();
-      unsigned long start = millis();
-      while (millis() - start < OWNER_POLL_INTERVAL)
-      {
-        loopMQTT(
-            WROVER_UNIQUE_ID,
-            MQTT_USERNAME,
-            MQTT_PASSWORD,
-            fullTopics,
-            MQTT_TOPIC_COUNT);
-        delay(50);
-      }
-    }
+ if (deviceHasOwner(WROVER_UNIQUE_ID)) {
+    Serial.println("already has owner");
+  } else {
+    Serial.println("no owner set, entering waitForOwner()");
+    waitForOwner();
   }
+  Serial.println("left loop");
+  broadcastWelcome();
   showFingerprintPrompt();
-  delay(200);
 }
 
 void loop()
 {
   showFingerprintPrompt();
-
-  loopMQTT(
-      WROVER_UNIQUE_ID,
-      MQTT_USERNAME,
-      MQTT_PASSWORD,
-      fullTopics,
-      MQTT_TOPIC_COUNT);
-
+  loopMQTT(WROVER_UNIQUE_ID, MQTT_USERNAME, MQTT_PASSWORD,
+           fullTopics, MQTT_TOPIC_COUNT);
   delay(2000);
 }

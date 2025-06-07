@@ -146,11 +146,11 @@ void logToFirebase(const char *deviceId, LogData logData)
   if (! Firebase.Firestore.createDocument(
           &fbdo,
           FIREBASE_PROJECT,
-         "",       // default database
-         "logs",   // collection path
-         "",       // empty → auto‐ID
+         "",       
+         "logs",   
+         "",      
           payload.c_str(),
-         ""        // no field mask
+         ""       
           ))
   {
     Serial.printf("Firestore.createDocument failed: %s\n",
@@ -228,7 +228,16 @@ void showWelcome()
 
 void showFingerprintPrompt() {
   StaticJsonDocument<128> jd;
-  jd["message"]   = "Place your finger on the sensor";
+  jd["message"]   = "Place your finger on\nthe sensor";
+  jd["isQrCode"]  = false;
+  String out;
+  serializeJson(jd, out);
+  sendOled(out.c_str());
+}
+
+void showRegisterPrompt() {
+  StaticJsonDocument<128> jd;
+  jd["message"]   = "Place your preferred \nfinger on the sensor\n to register";
   jd["isQrCode"]  = false;
   String out;
   serializeJson(jd, out);

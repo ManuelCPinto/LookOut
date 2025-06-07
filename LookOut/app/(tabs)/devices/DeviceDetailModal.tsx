@@ -263,7 +263,7 @@ const SheetContent = memo(function SheetContent({
           ))}
         </View>
 
-            {/* ── EVENT HISTORY LINK ── */}
+        {/* ── EVENT HISTORY LINK ── */}
         {(
           <Animatable.View animation="fadeInLeft" delay={200}>
             <Pressable

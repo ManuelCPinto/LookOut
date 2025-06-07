@@ -59,4 +59,6 @@ void showRegistrationPrompt();
 void showWelcome();
 
 void showFingerprintPrompt();
+void showRegisterPrompt();
+
 #endif

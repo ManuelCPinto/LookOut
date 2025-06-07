@@ -51,7 +51,6 @@ void fingerprintCallback(FingerprintStage stage, FingerprintError error)
   switch (stage)
   {
   case FINGERPRINT_FIRST_REGISTRATION_STAGE:
-    displayText("Place your finger on the sensor...");
     break;
   case FINGERPRINT_REMOVE_FINGER_STAGE:
     displayText("Remove your finger...");
