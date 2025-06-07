@@ -16,7 +16,6 @@ import * as Animatable from "react-native-animatable";
 import RNModal from "react-native-modal";
 import { Device } from "@/lib/devices";
 import {
-  useDeviceEvents,
   useDeviceStats,
   useDeviceModal,
   useRenameDevice,
@@ -25,6 +24,8 @@ import {
 import { useRouter } from "expo-router";
 import { auth } from "@/lib/firebase";
 import { useMqttPublish } from "@/hooks/common";
+import { useAllLogs } from "@/hooks/logs/useAllLogs";
+import { getLogIconAndLabel, LogType } from "@/lib/logs";
 
 type Props = {
   device: Device;
@@ -82,33 +83,36 @@ const SheetContent = memo(function SheetContent({
   onClose(): void;
 }) {
   const router = useRouter();
-  const events = useDeviceEvents(device.id);
+
+  // ── LIVE LOGS HOOK ──
+  const allLogs = useAllLogs(device.id);
+  const recent = allLogs.slice(0, 3);
+
+  // ── STATS + RENAME + REGISTRATION HOOKS ──
   const { uptime, latency, signalQuality } = useDeviceStats(device.id);
   const { rename, loading: renaming } = useRenameDevice();
-
-  const [editing, setEditing] = useState(false);
-  const [draftName, setDraftName] = useState(device.name);
   const uid = auth.currentUser!.uid;
   const { publish } = useMqttPublish();
   const { checkOnce, startPolling, stopPolling, isRegistered, loading } =
-    useRegistrationFlow(device.id, uid!);
+    useRegistrationFlow(device.id, uid);
 
+  // ── LOCAL UI STATE ──
+  const [editing, setEditing] = useState(false);
+  const [draftName, setDraftName] = useState(device.name);
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [errorVisible, setErrorVisible] = useState(false);
   const [successVisible, setSuccessVisible] = useState(false);
 
+  // initialize draft when device changes
   useEffect(() => {
     setDraftName(device.name);
   }, [device.name]);
 
+  // auto‐hide success toast
   useEffect(() => {
     if (!successVisible) return;
-
-    const timer = setTimeout(() => {
-      setSuccessVisible(false);
-    }, 2000);
-
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setSuccessVisible(false), 2000);
+    return () => clearTimeout(t);
   }, [successVisible]);
 
   const handleSave = useCallback(async () => {
@@ -120,6 +124,7 @@ const SheetContent = memo(function SheetContent({
     router.push({ pathname: "/logs", params: { deviceId: device.id } });
   }, [device.id, router]);
 
+  const onPressFingerprint = useCallback(() => setConfirmVisible(true), []);
   const handleRegisterFingerprint = useCallback(() => {
     if (!uid) return;
     publish(`${device.id}/sensor/fingerprint`, {
@@ -129,25 +134,16 @@ const SheetContent = memo(function SheetContent({
     });
   }, [device.id, publish, uid]);
 
-  const onPressFingerprint = useCallback(() => {
-    setConfirmVisible(true);
-  }, []);
-
   const onConfirm = useCallback(async () => {
     setConfirmVisible(false);
     handleRegisterFingerprint();
     const already = await checkOnce();
-    if (already) {
-      setErrorVisible(true);
-    } else {
-      startPolling();
-    }
-  }, [handleRegisterFingerprint, checkOnce, startPolling]);
+    if (already) setErrorVisible(true);
+    else startPolling();
+  }, [checkOnce, handleRegisterFingerprint, startPolling]);
 
   useEffect(() => {
-    if (isRegistered) {
-      setSuccessVisible(true);
-    }
+    if (isRegistered) setSuccessVisible(true);
   }, [isRegistered]);
 
   const handleRequestSnapshot = useCallback(() => {
@@ -162,89 +158,18 @@ const SheetContent = memo(function SheetContent({
 
   return (
     <>
-      {/* Grabber */}
+      {/* ── DRAG HANDLE ── */}
       <Pressable onPress={onClose} className="items-center pt-2 pb-1">
         <View className="w-12 h-1 bg-gray-300 rounded-full" />
       </Pressable>
 
-      {/* Confirmation Modal */}
-      <RNModal isVisible={confirmVisible}>
-        <View className="p-6 bg-white rounded-lg">
-          <Pressable onPress={() => setConfirmVisible(false)} className="mb-4">
-            <Ionicons name="arrow-back" size={24} color="#333" />
-          </Pressable>
-          <Text className="mb-4 text-lg font-semibold">
-            Register fingerprint for this device?
-          </Text>
-          <View className="flex-row justify-end">
-            <Pressable
-              onPress={() => setConfirmVisible(false)}
-              className="px-4 py-2 mr-2"
-            >
-              <Text>Cancel</Text>
-            </Pressable>
-            <Pressable
-              onPress={onConfirm}
-              className="px-4 py-2 bg-blue-600 rounded"
-            >
-              <Text className="text-white">Yes</Text>
-            </Pressable>
-          </View>
-        </View>
-      </RNModal>
-
-      {/* Error Modal */}
-      <RNModal isVisible={errorVisible}>
-        <View className="p-6 bg-white rounded-lg">
-          <Pressable onPress={() => setErrorVisible(false)} className="mb-4">
-            <Ionicons name="arrow-back" size={24} color="#333" />
-          </Pressable>
-          <Text className="font-semibold text-red-600">
-            You are already registered on this device.
-          </Text>
-        </View>
-      </RNModal>
-
-      {/* Loading (polling) Modal */}
-      <RNModal isVisible={loading}>
-        <View className="items-center p-6 bg-white rounded-lg">
-          <Pressable onPress={stopPolling} className="self-start mb-4">
-            <Ionicons name="arrow-back" size={24} color="#333" />
-          </Pressable>
-          <ActivityIndicator size="large" color="#4F46E5" />
-          <Text className="mt-4">Waiting for fingerprint enrollment…</Text>
-        </View>
-      </RNModal>
-
-      {/* Success Modal */}
-      <RNModal isVisible={successVisible}>
-        <View className="items-center p-6 bg-white rounded-lg">
-          <Pressable
-            onPress={() => setSuccessVisible(false)}
-            className="self-start mb-4"
-          >
-            <Ionicons name="arrow-back" size={24} color="#333" />
-          </Pressable>
-          <Ionicons name="checkmark-circle-outline" size={80} color="#10B981" />
-          <Text className="mt-4 font-semibold">Enrollment successful!</Text>
-        </View>
-      </RNModal>
-
-      <ScrollView
-        contentContainerStyle={{ paddingBottom: 24 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Header */}
+      {/* ── FINGERPRINT / RENAME / HEADER ── */}
+      <ScrollView contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
         <View className="flex-row items-center justify-between px-4 py-3">
-          {/* Fingerprint button on the left in a box outline */}
-          <Pressable
-            onPress={onPressFingerprint}
-            className="p-2 border border-gray-300 rounded"
-          >
+          <Pressable onPress={onPressFingerprint} className="p-2 border border-gray-300 rounded">
             <Ionicons name="finger-print-outline" size={20} color="#4B5563" />
           </Pressable>
 
-          {/* Title or editing input, centered */}
           {editing ? (
             <TextInput
               value={draftName}
@@ -257,7 +182,6 @@ const SheetContent = memo(function SheetContent({
             </Text>
           )}
 
-          {/* Right-side: either save/cancel or pencil */}
           {editing ? (
             <View className="flex-row items-center">
               {renaming ? (
@@ -278,7 +202,7 @@ const SheetContent = memo(function SheetContent({
           )}
         </View>
 
-        {/* Image */}
+        {/* ── DEVICE IMAGE ── */}
         <Animatable.View animation="fadeIn" className="items-center mt-2">
           <Image
             source={require("@/assets/camera.png")}
@@ -290,54 +214,40 @@ const SheetContent = memo(function SheetContent({
           />
           <View className="absolute p-1 bg-white rounded-full shadow bottom-2 right-2">
             <Ionicons
-              name={
-                device.status === "online" ? "ellipse" : "remove-circle-outline"
-              }
+              name={device.status === "online" ? "ellipse" : "remove-circle-outline"}
               size={12}
               color={device.status === "online" ? "#10B981" : "#EF4444"}
             />
           </View>
         </Animatable.View>
 
-        {/* ─── ACTIONS ─── */}
+        {/* ── ACTION BUTTON ── */}
         <View className="flex-row justify-around px-4 mt-6">
           <Pressable
-            onPress={handleRequestSnapshot} 
+            onPress={handleRequestSnapshot}
             className="flex-1 mx-2 bg-[#4F46E5] py-3 rounded-xl items-center shadow"
           >
             <Text className="font-semibold text-white">Request Snapshot</Text>
           </Pressable>
         </View>
 
-        {/* Quick Stats */}
+        {/* ── QUICK STATS ── */}
         <View className="flex-row justify-between px-4 mt-8">
           {[
             {
               icon: "time-outline",
               sub: "Uptime",
-              render: () => (
-                <Text className="text-lg font-semibold text-gray-800">
-                  {h}h {m}m
-                </Text>
-              ),
+              value: `${h}h ${m}m`,
             },
             {
               icon: "speedometer-outline",
               sub: "Latency",
-              render: () => (
-                <Text className="text-lg font-semibold text-gray-800">
-                  {latency} ms
-                </Text>
-              ),
+              value: `${latency} ms`,
             },
             {
               icon: "wifi-outline",
               sub: "Signal",
-              render: () => (
-                <Text className="text-lg font-semibold text-gray-800">
-                  {signalQuality}%
-                </Text>
-              ),
+              value: `${signalQuality}%`,
             },
           ].map((s, i) => (
             <Animatable.View
@@ -347,58 +257,122 @@ const SheetContent = memo(function SheetContent({
               className="items-center flex-1 p-4 mx-1 bg-gray-50 rounded-2xl"
             >
               <Ionicons name={s.icon as any} size={28} color="#4F46E5" />
-              {s.render()}
+              <Text className="mt-2 text-lg font-semibold text-gray-800">{s.value}</Text>
               <Text className="mt-1 text-xs text-gray-500">{s.sub}</Text>
             </Animatable.View>
           ))}
         </View>
 
-        {/* Event History */}
-        <Animatable.View
-          animation="fadeInLeft"
-          delay={200 + events.length * 100}
-        >
-          <Pressable
-            onPress={handleHistory}
-            className="flex-row items-center px-4 mt-8 mb-2"
-          >
-            <Text className="text-lg font-semibold text-gray-800 underline">
-              Event History
-            </Text>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color="#4F46E5"
-              className="ml-1"
-            />
-          </Pressable>
-        </Animatable.View>
-
-        {/* Events */}
-        {events.map((e, idx) => (
-          <Animatable.View
-            key={e.id}
-            animation="fadeInLeft"
-            delay={300 + idx * 100}
-            className="flex-row items-center p-4 mx-4 mb-3 bg-gray-50 rounded-2xl"
-          >
-            <Ionicons
-              name={
-                e.type === "doorbell" ? "notifications-outline" : "walk-outline"
-              }
-              size={24}
-              color="#4F46E5"
-              className="mr-4"
-            />
-            <View className="flex-1">
-              <Text className="font-medium text-gray-800">
-                {e.type === "doorbell" ? "Doorbell rang" : "Motion detected"}
+            {/* ── EVENT HISTORY LINK ── */}
+        {(
+          <Animatable.View animation="fadeInLeft" delay={200}>
+            <Pressable
+              onPress={handleHistory}
+              className="flex-row items-center px-4 py-2"
+            >
+              <Text className="flex-1 text-lg font-semibold text-gray-800 underline">
+                Event History
               </Text>
-              <Text className="mt-1 text-xs text-gray-500">{e.time}</Text>
-            </View>
+              <Ionicons name="chevron-forward" size={20} color="#4F46E5" />
+            </Pressable>
           </Animatable.View>
-        ))}
+        )}
+
+    
+         {/* ── LAST THREE LOGS or PLACEHOLDER ── */}
+         {(recent.length > 0 ? (
+            recent.map((e, idx) => {
+              const { iconName, label } = getLogIconAndLabel(e.type as LogType);
+              const date = e.createdAt.toDate(); // <-- convert to JS Date
+              return (
+                <Animatable.View
+                  key={e.id}
+                  animation="fadeInLeft"
+                  delay={300 + idx * 100}
+                  className="flex-row items-center p-4 mb-3 shadow-sm bg-gray-50 rounded-2xl"
+                >
+                  <View className="p-2 rounded-full bg-indigo-50">
+                    <Ionicons name={iconName} size={24} color="#4F46E5" />
+                  </View>
+                  <View className="flex-1 ml-4">
+                    <Text className="font-medium text-gray-800">
+                      {label}
+                    </Text>
+                    <Text className="mt-1 text-xs text-gray-500">
+                      {date.toLocaleString([], {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </Text>
+                  </View>
+                </Animatable.View>
+              );
+            })
+          ) : (
+            <View className="items-center py-12">
+              <Text className="mt-4 text-gray-400">
+                No events yet.
+              </Text>
+            </View>
+          )
+        )}
       </ScrollView>
+      
+      {/* fingerprint confirm */}
+      <RNModal isVisible={confirmVisible}>
+        <View className="p-6 bg-white rounded-lg">
+          <Pressable onPress={() => setConfirmVisible(false)} className="mb-4">
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </Pressable>
+          <Text className="mb-4 text-lg font-semibold">
+            Register fingerprint for this device?
+          </Text>
+          <View className="flex-row justify-end">
+            <Pressable onPress={() => setConfirmVisible(false)} className="px-4 py-2 mr-2">
+              <Text>Cancel</Text>
+            </Pressable>
+            <Pressable onPress={onConfirm} className="px-4 py-2 bg-blue-600 rounded">
+              <Text className="text-white">Yes</Text>
+            </Pressable>
+          </View>
+        </View>
+      </RNModal>
+
+      {/* already registered */}
+      <RNModal isVisible={errorVisible}>
+        <View className="p-6 bg-white rounded-lg">
+          <Pressable onPress={() => setErrorVisible(false)} className="mb-4">
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </Pressable>
+          <Text className="font-semibold text-red-600">
+            You are already registered on this device.
+          </Text>
+        </View>
+      </RNModal>
+
+      {/* waiting for fingerprint */}
+      <RNModal isVisible={loading}>
+        <View className="items-center p-6 bg-white rounded-lg">
+          <Pressable onPress={stopPolling} className="self-start mb-4">
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </Pressable>
+          <ActivityIndicator size="large" color="#4F46E5" />
+          <Text className="mt-4">Waiting for fingerprint enrollment…</Text>
+        </View>
+      </RNModal>
+
+      {/* success toast */}
+      <RNModal isVisible={successVisible}>
+        <View className="items-center p-6 bg-white rounded-lg">
+          <Pressable onPress={() => setSuccessVisible(false)} className="self-start mb-4">
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </Pressable>
+          <Ionicons name="checkmark-circle-outline" size={80} color="#10B981" />
+          <Text className="mt-4 font-semibold">Enrollment successful!</Text>
+        </View>
+      </RNModal>
     </>
   );
 });

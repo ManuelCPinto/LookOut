@@ -117,3 +117,34 @@ export function getLogIconAndLabel(
       };
   }
 }
+
+/**
+ * Subscribe in real time to *all* logs for exactly one device,
+ * ordered newest→oldest.
+ */
+export function subscribeLogsByDeviceId(
+  deviceId: string,
+  cb: (logs: Log[]) => void
+): Unsubscribe {
+  const logsCol = collection(db, "logs");
+  const q = query(
+    logsCol,
+    where("deviceId", "==", deviceId),
+    orderBy("createdAt", "desc")
+  );
+  return onSnapshot(q, (snap) => {
+    const results: Log[] = snap.docs.map((docSnap) => {
+      const d = docSnap.data() as DocumentData;
+      return {
+        id:         docSnap.id,
+        deviceId:   d.deviceId,
+        deviceName: d.deviceName,
+        photoURL:   d.photoURL,
+        type:       d.type as LogType,
+        createdAt:  d.createdAt,
+        userId:     d.userId,
+      };
+    });
+    cb(results);
+  });
+}
