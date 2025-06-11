@@ -27,6 +27,7 @@ import {
 import { useManageMembers } from "@/hooks/family/useManageMembers";
 import { useGetUsername } from "@/hooks/user";
 import { useSearchFilter } from "@/hooks/common";
+import { useDeleteMember } from "@/hooks/family/useDeleteMember";
 
 /**
  * MemberItem: renders a single “card” for a family member.
@@ -76,10 +77,7 @@ function MemberItem({
           borderWidth: 1,
         }}
       >
-        <Text
-          className="text-xs font-semibold"
-          style={{ color: pillBorder }}
-        >
+        <Text className="text-xs font-semibold" style={{ color: pillBorder }}>
           {role}
         </Text>
       </View>
@@ -114,13 +112,12 @@ export default function FamilyDetailScreen() {
     term,
     setTerm,
     filtered: members,
-  } = useSearchFilter(allMembers, (m, t) =>
-    m.uid.includes(t)
-  );
+  } = useSearchFilter(allMembers, (m, t) => m.uid.includes(t));
   const memberCount = members.length;
 
   // Handlers for promoting/demoting/transferring.
   const { setRole, transfer, loading: managing } = useManageMembers(familyId);
+  const { deleteMember, loading: deleting } = useDeleteMember(familyId);
 
   const [selected, setSelected] = useState<{ uid: string; role: Role } | null>(
     null
@@ -144,16 +141,14 @@ export default function FamilyDetailScreen() {
     Guest: 2,
   };
 
-  const sortedMembers = members
-    .slice()
-    .sort((a, b) => {
-      const ra = roleOrder[a.role];
-      const rb = roleOrder[b.role];
-      if (ra !== rb) return ra - rb;
-      const nameA =  a.uid.slice(-6).toLowerCase();
-      const nameB =  b.uid.slice(-6).toLowerCase();
-      return nameA.localeCompare(nameB);
-    });
+  const sortedMembers = members.slice().sort((a, b) => {
+    const ra = roleOrder[a.role];
+    const rb = roleOrder[b.role];
+    if (ra !== rb) return ra - rb;
+    const nameA = a.uid.slice(-6).toLowerCase();
+    const nameB = b.uid.slice(-6).toLowerCase();
+    return nameA.localeCompare(nameB);
+  });
 
   return (
     <Animatable.View animation="fadeIn" duration={300} style={{ flex: 1 }}>
@@ -317,17 +312,33 @@ export default function FamilyDetailScreen() {
                 </Text>
               </TouchableOpacity>
             )}
+            {/* Transfer Ownership (now gray) */}
             <TouchableOpacity
               onPress={() => {
                 setMenuVisible(false);
                 setConfirmMemberModal(true);
               }}
+              disabled={managing || deleting}
               className="py-3 border-b border-gray-200"
             >
-              <Text className="font-semibold text-center text-red-600">
+              <Text className="text-center text-gray-600">
                 Transfer Ownership
               </Text>
             </TouchableOpacity>
+
+            {/* Kick from Family (new, in red) */}
+            <TouchableOpacity
+              onPress={async () => {
+                setMenuVisible(false);
+                await deleteMember(selected!.uid);
+              }}
+              disabled={managing || deleting}
+              className="py-3 border-b border-gray-200"
+            >
+              <Text className="text-center text-red-600">Kick from Family</Text>
+            </TouchableOpacity>
+
+            {/* Cancel */}
             <TouchableOpacity
               onPress={() => setMenuVisible(false)}
               className="py-3 mt-2"
@@ -350,8 +361,8 @@ export default function FamilyDetailScreen() {
               Transfer Ownership?
             </Text>
             <Text className="mb-6 text-center">
-              This will make <Text className="font-semibold">{selName}</Text> the
-              owner.
+              This will make <Text className="font-semibold">{selName}</Text>{" "}
+              the owner.
             </Text>
             <View className="flex-row justify-end space-x-4">
               <TouchableOpacity onPress={() => setConfirmMemberModal(false)}>
