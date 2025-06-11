@@ -15,7 +15,7 @@
 
 using namespace std;
 
-static const int MAX_ULTRASONIC_DISTANCE = 1;
+static const int MAX_ULTRASONIC_DISTANCE = 10;
 static volatile bool isSomeoneClose = false;
 static volatile bool initialOledReceived = false;
 
@@ -193,7 +193,6 @@ void loopUltrasonicSensor()
   if (distance <= MAX_ULTRASONIC_DISTANCE && !isSomeoneClose)
   {
     isSomeoneClose = true;
-    /*
     UltrasonicData newFingerprintData = {true};
 
     JsonDocument json;
@@ -201,7 +200,7 @@ void loopUltrasonicSensor()
     uint8_t jsonBuffer[256];
     size_t jsonLen = serializeJson(json, jsonBuffer);
 
-    publishMQTT(string(WROVER_UNIQUE_ID + string("/sensor/ultrasonic")).c_str(), jsonBuffer, jsonLen); */
+    publishMQTT(string(WROVER_UNIQUE_ID + string("/sensor/ultrasonic")).c_str(), jsonBuffer, jsonLen);
   }
   else
   {
