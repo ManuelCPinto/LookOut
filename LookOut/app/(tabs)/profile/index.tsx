@@ -49,11 +49,8 @@ export default function ProfileScreen() {
 
   const [feedbackVisible, setFeedbackVisible] = useState(false);
   const [feedbackStatus, setFeedbackStatus] = useState<JoinStatus>("loading");
-
-  const [permission, requestPermission] = useCameraPermissions();
-  const cameraRef = useRef<CameraView>(null);
-
   const [confirmSignOut, setConfirmSignOut] = useState(false);
+
 
   const handleJoin = async (code: string) => {
     if (!code.trim()) {
@@ -245,7 +242,7 @@ export default function ProfileScreen() {
                 Join a Family
               </Animatable.Text>
               <TouchableOpacity
-                onPress={() => setJoinMode("scan")}
+                onPress={() => router.push("/profile/add")}
                 className="flex-row items-center px-4 py-3 mb-3 bg-gray-100 rounded-full"
               >
                 <Ionicons name="qr-code-outline" size={20} color="#64748B" />
@@ -260,30 +257,6 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </>
           )}
-
-          {joinMode === "scan" && permission?.granted && (
-            <>
-              <CameraView
-                style={StyleSheet.absoluteFill}
-                ref={cameraRef}
-                mode="picture"
-                facing="back"
-                mute
-                responsiveOrientationWhenOrientationLocked
-                barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
-                onBarcodeScanned={({ data }) => {
-                  if (!joining) handleJoin(data);
-                }}
-              />
-              <TouchableOpacity
-                onPress={() => setJoinMode("choose")}
-                className="absolute p-2 bg-white rounded-full shadow top-12 left-4"
-              >
-                <Ionicons name="arrow-back" size={24} color="#334155" />
-              </TouchableOpacity>
-            </>
-          )}
-
           {joinMode === "manual" && (
             <>
               <Animatable.View animation="fadeInDown" className="mb-4">

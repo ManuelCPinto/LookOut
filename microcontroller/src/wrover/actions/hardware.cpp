@@ -54,18 +54,21 @@ void takePhotoToSupabase(const char *bucket, const char *folderName, function<vo
 
 void addFingerprintUserToFirebase(const char *nodeId, const char *userId)
 {
-  Serial.printf("nodeId: %s | userId: %s\n", nodeId, userId);
+  Serial.printf("[addFingerprintUserToFirebase] nodeId: %s | userId: %s\n", nodeId, userId);
 
   String path = "devices/";
   path.concat(nodeId);
+
+  Serial.print("[addFingerprintUserToFirebase] Fetching document at "); Serial.println(path);
+
   if (!Firebase.Firestore.getDocument(&fbdo, FIREBASE_PROJECT, "", path.c_str()))
   {
-    Serial.printf("getDocument failed: %s\n", fbdo.errorReason().c_str());
+    Serial.printf("[addFingerprintUserToFirebase] getDocument failed: %s\n", fbdo.errorReason().c_str());
     return;
   }
+  Serial.printf("[addFingerprintUserToFirebase] HTTP code: %d\n", fbdo.httpCode());
   if (fbdo.httpCode() != 200)
   {
-    Serial.printf("HTTP %d on getDocument\n", fbdo.httpCode());
     return;
   }
 
@@ -73,6 +76,7 @@ void addFingerprintUserToFirebase(const char *nodeId, const char *userId)
   deserializeJson(inDoc, fbdo.payload());
   JsonVariant valuesVar = inDoc["fields"]["registeredUsers"]["arrayValue"]["values"];
   bool hasExisting = valuesVar.is<JsonArray>();
+  Serial.printf("[addFingerprintUserToFirebase] existing registeredUsers array? %s\n", hasExisting ? "yes" : "no");
   JsonArray existing = hasExisting ? valuesVar.as<JsonArray>() : JsonArray();
 
   String body = "{\"fields\":{";
@@ -95,10 +99,13 @@ void addFingerprintUserToFirebase(const char *nodeId, const char *userId)
   body.concat("\"}");
   body.concat("]}}}}");
 
+  Serial.println("[addFingerprintUserToFirebase] Patching document with new registeredUsers list");
   if (!Firebase.Firestore.patchDocument(&fbdo, FIREBASE_PROJECT, "", path, body, "registeredUsers"))
   {
-    Serial.printf("patchDocument failed: %s\n", fbdo.errorReason().c_str());
+    Serial.printf("[addFingerprintUserToFirebase] patchDocument failed: %s\n", fbdo.errorReason().c_str());
+    return;
   }
+  Serial.println("[addFingerprintUserToFirebase] patchDocument succeeded");
 }
 
 void logToFirebase(const char *deviceId, LogData logData)

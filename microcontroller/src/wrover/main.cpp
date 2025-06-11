@@ -20,7 +20,6 @@ static const unsigned long OWNER_TIMEOUT = 30000UL;
 static const unsigned long WELCOME_BROADCAST_MS = 3000UL;
 static const unsigned long WELCOME_RETRY_DELAY = 500UL;
 
-static char pendingUserId[33] = {0};
 String MQTT_TOPICS[] = {
     BuzzerData::TOPIC,
     UltrasonicData::TOPIC,
@@ -89,7 +88,7 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
   if (strcmp(topic, UltrasonicData::TOPIC) == 0)
   {
     UltrasonicData u = UltrasonicData::fromJson(docIn);
-    /*if (u.isClose)
+    if (u.isClose)
     {
       takePhotoToSupabase(
           SUPABASE_BUCKET,
@@ -104,48 +103,66 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
             logToFirebase(WROVER_UNIQUE_ID, logData);
           });
     }
-    */
+    
     return;
   }
 
-  if (strcmp(topic, FingerprintData::TOPIC) == 0)
+ if (strcmp(topic, FingerprintData::TOPIC) == 0)
+{
+  FingerprintData fpd = FingerprintData::fromJson(docIn);
+  switch (fpd.type)
   {
-    FingerprintData fpd = FingerprintData::fromJson(docIn);
-    switch (fpd.type)
+case FINGERPRINT_UPDATE:
+  Serial.println("[WROVER] Received FINGERPRINT_UPDATE");
+  if (fpd.isNew)
+  {
+    addFingerprintUserToFirebase(WROVER_UNIQUE_ID, fpd.userId);
+    Serial.println("[WROVER] Fingerprint Registered to Firebase");
     {
-    case FINGERPRINT_UPDATE:
-      if (fpd.isNew)
-      {
-        addFingerprintUserToFirebase(WROVER_UNIQUE_ID, fpd.userId);
-        Serial.println("Fingerprint Registered...");
-      }
-      break;
+      time_t now = time(nullptr);
+      LogData logData = {
+        LogType::NEW_FINGERPRINT,
+        now,
+        "",          
+        fpd.userId
+      };
+      logToFirebase(WROVER_UNIQUE_ID, logData);
+      Serial.println("[WROVER] Logged NEW_FINGERPRINT event");
+    }
+  }
+  break;
+
     case FINGERPRINT_TOUCH:
+      Serial.println("[WROVER] Received FINGERPRINT_TOUCH");
       beep(2000);
       takePhotoToSupabase(
-          SUPABASE_BUCKET,
-          WROVER_UNIQUE_ID,
-          [=](string photoURL, time_t timestamp)
-          {
-            LogData logData = {
-                LogType::RING_DOORBELL,
-                timestamp,
-                photoURL.c_str(),
-                fpd.userId};
-            logToFirebase(WROVER_UNIQUE_ID, logData);
-          });
+        SUPABASE_BUCKET,
+        WROVER_UNIQUE_ID,
+        [=](string photoURL, time_t timestamp)
+        {
+          LogData logData = {
+            LogType::RING_DOORBELL,
+            timestamp,
+            photoURL.c_str(),
+            fpd.userId
+          };
+          logToFirebase(WROVER_UNIQUE_ID, logData);
+          Serial.println("[WROVER] Logged ring event after fingerprint touch");
+        }
+      );
       break;
+
     case FINGERPRINT_REGISTRATION:
-      Serial.println("Register Fingerprint...");
-      showRegisterPrompt();
+      Serial.println("[WROVER] Received FINGERPRINT_REGISTRATION – forwarding to WROOM");
       publishMQTT(
-          (string(WROOM_UNIQUE_ID) + "/" + FingerprintData::TOPIC).c_str(),
-          payload,
-          length);
+        (string(WROOM_UNIQUE_ID) + "/" + FingerprintData::TOPIC).c_str(),
+        payload,
+        length
+      );
+      showRegisterPrompt();
       break;
-    }
-    return;
   }
+}
 
   if (strcmp(topic, TAKE_PHOTO_TOPIC) == 0)
   {
@@ -170,8 +187,8 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
         (string(WROOM_UNIQUE_ID) + "/" + OledData::TOPIC).c_str(),
         payload,
         length);
-    return;
   }
+  showFingerprintPrompt();
 }
 
 void setup()
@@ -221,7 +238,6 @@ void setup()
 
 void loop()
 {
-  showFingerprintPrompt();
   loopMQTT(WROVER_UNIQUE_ID, MQTT_USERNAME, MQTT_PASSWORD,
            fullTopics, MQTT_TOPIC_COUNT);
   delay(2000);

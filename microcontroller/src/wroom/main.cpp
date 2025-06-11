@@ -15,9 +15,8 @@
 
 using namespace std;
 
-static const int MAX_ULTRASONIC_DISTANCE = 10;
+static const int MAX_ULTRASONIC_DISTANCE = 1;
 static volatile bool isSomeoneClose = false;
-
 static volatile bool initialOledReceived = false;
 
 struct CompositeOled
@@ -109,22 +108,48 @@ void mqttCallback(char *topic, uint8_t *payload, unsigned int length)
     switch (fingerprintData.type)
     {
     case FINGERPRINT_REGISTRATION:
+      Serial.println("[MQTT] Received FINGERPRINT_REGISTRATION");
+      Serial.print  ("[MQTT] Calling registerFingerprint()… ");
       uint16_t id = registerFingerprint(fingerprintCallback);
-
+      Serial.print  ("[MQTT] registerFingerprint() returned ID=");
+      Serial.println(id);
+      Serial.println("[MQTT] After registerFingerprint()");
       if (id > 0)
       {
-        bool isNew = fingerprintUserIds.count(id) == 0;
-        char allocatedUserId[strlen(fingerprintData.userId) + 1];
-        strcpy(allocatedUserId, fingerprintData.userId);
-        fingerprintUserIds[id] = string(allocatedUserId);
+         Serial.println("[MQTT] id > 0, proceeding to send update");
+          bool isNew = fingerprintUserIds.count(id) == 0;
+          char allocatedUserId[strlen(fingerprintData.userId) + 1];
+          strcpy(allocatedUserId, fingerprintData.userId);
+          fingerprintUserIds[id] = string(allocatedUserId);
 
-        FingerprintData newFingerprintData = {FINGERPRINT_UPDATE, fingerprintData.userId, isNew};
+          FingerprintData newFingerprintData = {
+            FINGERPRINT_UPDATE,
+            fingerprintData.userId,
+            isNew
+          };
 
-        JsonDocument json;
-        newFingerprintData.toJson(json);
-        uint8_t jsonBuffer[256];
-        size_t jsonLen = serializeJson(json, jsonBuffer);
-        publishMQTT(string(WROVER_UNIQUE_ID + string("/") + topic).c_str(), jsonBuffer, jsonLen);
+          // Serialize to JSON
+          StaticJsonDocument<256> jsonDoc;
+          newFingerprintData.toJson(jsonDoc);
+          char jsonOut[256];
+          size_t jsonLen = serializeJson(jsonDoc, jsonOut, sizeof(jsonOut));
+
+          // Build topic
+          String topicStr = String(WROVER_UNIQUE_ID) + String("/") + String(FingerprintData::TOPIC);
+
+          // Debug prints
+          Serial.print("[MQTT] Publishing to topic: ");
+          Serial.println(topicStr);
+          Serial.print("[MQTT] Payload (len=");
+          Serial.print(jsonLen);
+          Serial.print("): ");
+          Serial.println(jsonOut);
+
+          // Actually publish
+          publishMQTT(topicStr.c_str(), (uint8_t*)jsonOut, jsonLen);
+          Serial.println("[MQTT] publishMQTT() called");
+      } else {
+        Serial.println("[MQTT] id == 0, registration failed or cancelled");
       }
       break;
     }
@@ -157,10 +182,18 @@ void loopScanFingerprint()
 void loopUltrasonicSensor()
 {
   float distance = fetchDistance();
+  if (distance < 0) {
+    Serial.println("Distance: no echo");
+  } else {
+    Serial.printf("Distance: %.1f cm\n", distance);
+  }
+  Serial.printf("Max Distance: %d cm\n", MAX_ULTRASONIC_DISTANCE);
+  Serial.printf("isSomeoneClose: %s\n\n", (distance>0 && distance <= MAX_ULTRASONIC_DISTANCE) ? "true":"false");
+
   if (distance <= MAX_ULTRASONIC_DISTANCE && !isSomeoneClose)
   {
     isSomeoneClose = true;
-
+    /*
     UltrasonicData newFingerprintData = {true};
 
     JsonDocument json;
@@ -168,12 +201,13 @@ void loopUltrasonicSensor()
     uint8_t jsonBuffer[256];
     size_t jsonLen = serializeJson(json, jsonBuffer);
 
-    publishMQTT(string(WROVER_UNIQUE_ID + string("/sensor/ultrasonic")).c_str(), jsonBuffer, jsonLen);
+    publishMQTT(string(WROVER_UNIQUE_ID + string("/sensor/ultrasonic")).c_str(), jsonBuffer, jsonLen); */
   }
   else
   {
     isSomeoneClose = false;
   }
+  delay(500);
 }
 
 void setup()

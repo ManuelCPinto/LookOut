@@ -1,6 +1,6 @@
 // app/(tabs)/devices/DeviceDetailModal.tsx
 
-import React, { useEffect, useState, useCallback, memo } from "react";
+import React, { useEffect, useState, useCallback, memo, useRef } from "react";
 import {
   Pressable,
   View,
@@ -26,6 +26,7 @@ import { auth } from "@/lib/firebase";
 import { useMqttPublish } from "@/hooks/common";
 import { useAllLogs } from "@/hooks/logs/useAllLogs";
 import { getLogIconAndLabel, LogType } from "@/lib/logs";
+import { Timestamp } from "firebase/firestore";
 
 type Props = {
   device: Device;
@@ -93,8 +94,7 @@ const SheetContent = memo(function SheetContent({
   const { rename, loading: renaming } = useRenameDevice();
   const uid = auth.currentUser!.uid;
   const { publish } = useMqttPublish();
-  const { checkOnce, startPolling, stopPolling, isRegistered, loading } =
-    useRegistrationFlow(device.id, uid);
+  const { checkOnce, startPolling, stopPolling, isRegistered, loading } = useRegistrationFlow(device.id, uid);
 
   // ── LOCAL UI STATE ──
   const [editing, setEditing] = useState(false);
@@ -102,38 +102,33 @@ const SheetContent = memo(function SheetContent({
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [errorVisible, setErrorVisible] = useState(false);
   const [successVisible, setSuccessVisible] = useState(false);
+  const [snapshotConfirmVisible, setSnapshotConfirmVisible] = useState(false);
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const [snapshotSuccessVisible, setSnapshotSuccessVisible] = useState(false);
+  const initialSnapshotTimestamp = useRef<Timestamp | null>(null);
 
-  // initialize draft when device changes
-  useEffect(() => {
-    setDraftName(device.name);
-  }, [device.name]);
+  useEffect(() => { setDraftName(device.name); }, [device.name]);
 
-  // auto‐hide success toast
   useEffect(() => {
     if (!successVisible) return;
     const t = setTimeout(() => setSuccessVisible(false), 2000);
     return () => clearTimeout(t);
   }, [successVisible]);
 
-  const handleSave = useCallback(async () => {
-    await rename(device.id, draftName);
-    setEditing(false);
-  }, [device.id, draftName, rename]);
+  useEffect(() => {
+    if (!snapshotSuccessVisible) return;
+    const t = setTimeout(() => setSnapshotSuccessVisible(false), 2000);
+    return () => clearTimeout(t);
+  }, [snapshotSuccessVisible]);
 
-  const handleHistory = useCallback(() => {
-    router.push({ pathname: "/logs", params: { deviceId: device.id } });
-  }, [device.id, router]);
+  const handleSave = useCallback(async () => { await rename(device.id, draftName); setEditing(false); }, [device.id, draftName, rename]);
+  const handleHistory = useCallback(() => { router.push({ pathname: "/logs", params: { deviceId: device.id } }); }, [device.id, router]);
 
   const onPressFingerprint = useCallback(() => setConfirmVisible(true), []);
   const handleRegisterFingerprint = useCallback(() => {
     if (!uid) return;
-    publish(`${device.id}/sensor/fingerprint`, {
-      type: "FINGERPRINT_REGISTRATION",
-      userId: uid,
-      isNew: false,
-    });
+    publish(`${device.id}/sensor/fingerprint`, { type: "FINGERPRINT_REGISTRATION", userId: uid, isNew: false });
   }, [device.id, publish, uid]);
-
   const onConfirm = useCallback(async () => {
     setConfirmVisible(false);
     handleRegisterFingerprint();
@@ -141,21 +136,29 @@ const SheetContent = memo(function SheetContent({
     if (already) setErrorVisible(true);
     else startPolling();
   }, [checkOnce, handleRegisterFingerprint, startPolling]);
-
-  useEffect(() => {
-    if (isRegistered) setSuccessVisible(true);
-  }, [isRegistered]);
+  useEffect(() => { if (isRegistered) setSuccessVisible(true); }, [isRegistered]);
 
   const handleRequestSnapshot = useCallback(() => {
-    publish(`${device.id}/sensor/camera/take_photo`, {
-      type: "TAKE_PHOTO",
-      userId: uid,
-    });
+    publish(`${device.id}/sensor/camera/take_photo`, { type: "TAKE_PHOTO", userId: uid });
   }, [device.id, publish, uid]);
+  const onPressSnapshot = useCallback(() => setSnapshotConfirmVisible(true), []);
+  const onConfirmSnapshot = useCallback(() => {
+    initialSnapshotTimestamp.current = allLogs[0]?.createdAt ?? Timestamp.fromMillis(0);
+    setSnapshotConfirmVisible(false);
+    handleRequestSnapshot();
+    setSnapshotLoading(true);
+  }, [allLogs, handleRequestSnapshot]);
+
+  useEffect(() => {
+    const latest = allLogs[0]?.createdAt;
+    if (snapshotLoading && latest && initialSnapshotTimestamp.current && latest.toMillis() > initialSnapshotTimestamp.current.toMillis()) {
+      setSnapshotLoading(false);
+      setSnapshotSuccessVisible(true);
+    }
+  }, [allLogs, snapshotLoading]);
 
   const h = Math.floor(uptime / 3600);
   const m = Math.floor((uptime % 3600) / 60);
-
   return (
     <>
       {/* ── DRAG HANDLE ── */}
@@ -224,7 +227,7 @@ const SheetContent = memo(function SheetContent({
         {/* ── ACTION BUTTON ── */}
         <View className="flex-row justify-around px-4 mt-6">
           <Pressable
-            onPress={handleRequestSnapshot}
+            onPress={onPressSnapshot}
             className="flex-1 mx-2 bg-[#4F46E5] py-3 rounded-xl items-center shadow"
           >
             <Text className="font-semibold text-white">Request Snapshot</Text>
@@ -363,7 +366,7 @@ const SheetContent = memo(function SheetContent({
         </View>
       </RNModal>
 
-      {/* success toast */}
+      {/* fingerprint success toast */}
       <RNModal isVisible={successVisible}>
         <View className="items-center p-6 bg-white rounded-lg">
           <Pressable onPress={() => setSuccessVisible(false)} className="self-start mb-4">
@@ -373,6 +376,43 @@ const SheetContent = memo(function SheetContent({
           <Text className="mt-4 font-semibold">Enrollment successful!</Text>
         </View>
       </RNModal>
-    </>
+
+      {/* snapshot confirm */}
+      <RNModal isVisible={snapshotConfirmVisible}>
+        <View className="p-6 bg-white rounded-lg">
+          <Pressable onPress={() => setSnapshotConfirmVisible(false)} className="mb-4">
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </Pressable>
+          <Text className="mb-4 text-lg font-semibold">Request snapshot for this device?</Text>
+          <View className="flex-row justify-end">
+            <Pressable onPress={() => setSnapshotConfirmVisible(false)} className="px-4 py-2 mr-2"><Text>Cancel</Text></Pressable>
+            <Pressable onPress={onConfirmSnapshot} className="px-4 py-2 bg-blue-600 rounded"><Text className="text-white">Yes</Text></Pressable>
+          </View>
+        </View>
+      </RNModal>
+
+      {/* snapshot loading */}
+      <RNModal isVisible={snapshotLoading}>
+        <View className="items-center p-6 bg-white rounded-lg">
+          <Pressable onPress={() => setSnapshotLoading(false)} className="self-start mb-4">
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </Pressable>
+          <ActivityIndicator size="large" color="#4F46E5" />
+          <Text className="mt-4">Waiting for snapshot…</Text>
+        </View>
+      </RNModal>
+
+      {/* snapshot success */}
+      <RNModal isVisible={snapshotSuccessVisible}>
+        <View className="items-center p-6 bg-white rounded-lg">
+          <Pressable onPress={() => setSnapshotSuccessVisible(false)} className="self-start mb-4">
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </Pressable>
+          <Ionicons name="checkmark-circle-outline" size={80} color="#10B981" />
+          <Text className="mt-4 font-semibold">Snapshot taken!</Text>
+        </View>
+      </RNModal>
+
+    </>    
   );
 });

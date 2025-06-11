@@ -54,78 +54,98 @@ uint16_t findFreeId(uint16_t maxId = finger.capacity - 1)
   return -1;
 }
 
-uint16_t registerFingerprint2(void (*callback)(FingerprintStage stage, FingerprintError error))
-{
+uint16_t registerFingerprint2(void (*callback)(FingerprintStage, FingerprintError)) {
+  Serial.println("   >> registerFingerprint2()");
   int p = -1;
 
   uint16_t id = findFreeId();
-  if (id < 0)
-  {
+  Serial.print  ("      findFreeId() -> "); Serial.println(id);
+  if (id == 0) {  // or id < 0 depending on your implementation
+    Serial.println("      No free slot! Invoking error callback");
     callback(FINGERPRINT_ERROR, FINGERPRINT_STORAGE_FULL_ERROR);
     return 0;
   }
 
+  Serial.println("      Invoking callback: FIRST_REGISTRATION_STAGE");
   callback(FINGERPRINT_FIRST_REGISTRATION_STAGE, FINGERPRINT_NO_ERROR);
-  while (p != FINGERPRINT_OK)
-  {
-    p = finger.getImage();
+
+  // wait for finger down
+  Serial.println("      Waiting for finger image…");
+  while ((p = finger.getImage()) != FINGERPRINT_OK) {
     delay(100);
   }
+  Serial.println("      Image captured");
 
+  Serial.println("      Converting image to template #1");
   p = finger.image2Tz(1);
-  if (p != FINGERPRINT_OK)
-  {
+  Serial.print  ("      image2Tz(1) -> "); Serial.println(p);
+  if (p != FINGERPRINT_OK) {
+    Serial.println("      Conversion error, invoking callback");
     callback(FINGERPRINT_ERROR, FINGERPRINT_IMAGE_CONVERSION_ERROR);
     return 0;
   }
 
+  Serial.println("      Invoking callback: REMOVE_FINGER_STAGE");
   callback(FINGERPRINT_REMOVE_FINGER_STAGE, FINGERPRINT_NO_ERROR);
   delay(1000);
-  while (finger.getImage() != FINGERPRINT_NOFINGER)
-  {
+
+  Serial.println("      Waiting for finger removal…");
+  while (finger.getImage() != FINGERPRINT_NOFINGER) {
     delay(100);
   }
+  Serial.println("      Finger removed");
 
+  Serial.println("      Invoking callback: SECOND_REGISTRATION_STAGE");
   callback(FINGERPRINT_SECOND_REGISTRATION_STAGE, FINGERPRINT_NO_ERROR);
-  while ((p = finger.getImage()) != FINGERPRINT_OK)
-  {
+
+  Serial.println("      Waiting for second finger image…");
+  while ((p = finger.getImage()) != FINGERPRINT_OK) {
     delay(100);
   }
+  Serial.println("      Second image captured");
 
+  Serial.println("      Converting image to template #2");
   p = finger.image2Tz(2);
-  if (p != FINGERPRINT_OK)
-  {
+  Serial.print  ("      image2Tz(2) -> "); Serial.println(p);
+  if (p != FINGERPRINT_OK) {
+    Serial.println("      Conversion error on second image");
     callback(FINGERPRINT_ERROR, FINGERPRINT_IMAGE_CONVERSION_ERROR);
     return 0;
   }
 
+  Serial.println("      Creating model");
   p = finger.createModel();
-  if (p != FINGERPRINT_OK)
-  {
+  Serial.print  ("      createModel() -> "); Serial.println(p);
+  if (p != FINGERPRINT_OK) {
+    Serial.println("      Model creation error");
     callback(FINGERPRINT_ERROR, FINGERPRINT_MODEL_CREATION_ERROR);
     return 0;
   }
 
+  Serial.print  ("      Storing model at slot "); Serial.println(id);
   p = finger.storeModel(id);
-  if (p != FINGERPRINT_OK)
-  {
+  Serial.print  ("      storeModel() -> "); Serial.println(p);
+  if (p != FINGERPRINT_OK) {
+    Serial.println("      Store error");
     callback(FINGERPRINT_ERROR, FINGERPRINT_STORE_ERROR);
     return 0;
   }
 
+  Serial.println("      Invoking callback: FINISHED_STAGE");
   callback(FINGERPRINT_FINISHED_STAGE, FINGERPRINT_NO_ERROR);
   delay(2000);
+  Serial.println("   << registerFingerprint2() success");
   return id;
 }
 
-uint16_t registerFingerprint(void (*callback)(FingerprintStage stage, FingerprintError error))
-{
-  if (isFingerprintRegistering)
-    return 0;
-
+uint16_t registerFingerprint(void (*callback)(FingerprintStage, FingerprintError)) {
+  Serial.println(">> registerFingerprint()");
   isFingerprintRegistering = true;
+  Serial.print("callback ptr="); 
+  Serial.printf("   callback ptr=%p\n", (void*)callback);
   uint16_t id = registerFingerprint2(callback);
   isFingerprintRegistering = false;
+  Serial.print  ("<< registerFingerprint() returning "); Serial.println(id);
   return id;
 }
 
