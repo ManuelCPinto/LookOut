@@ -1,6 +1,6 @@
 // app/(tabs)/devices/DeviceDetailModalFam.tsx
 
-import React, { useEffect, useState, useCallback, memo } from "react";
+import React, { useEffect, useState, useCallback, memo, useRef } from "react";
 import {
   Pressable,
   View,
@@ -27,6 +27,7 @@ import { useMqttPublish } from "@/hooks/common";
 import { useHasRole } from "@/hooks/user/useHasRole";
 import { useAllLogs } from "@/hooks/logs/useAllLogs";
 import { getLogIconAndLabel, LogType } from "@/lib/logs";
+import { Timestamp } from "firebase/firestore";
 
 type Props = {
   familyId: string;
@@ -119,7 +120,11 @@ const SheetContent = memo(function SheetContent({
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [errorVisible, setErrorVisible] = useState(false);
   const [successVisible, setSuccessVisible] = useState(false);
-
+  const [snapshotConfirmVisible, setSnapshotConfirmVisible] = useState(false);
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const [snapshotSuccessVisible, setSnapshotSuccessVisible] = useState(false);
+  const initialSnapshotTimestamp = useRef<Timestamp | null>(null);
+  
   useEffect(() => setDraftName(device.name), [device.name]);
 
   useEffect(() => {
@@ -160,11 +165,23 @@ const SheetContent = memo(function SheetContent({
   }, [isRegistered]);
 
   const handleRequestSnapshot = useCallback(() => {
-    publish(`${device.id}/sensor/camera/take_photo`, {
-      type: "TAKE_PHOTO",
-      userId: uid,
-    });
+    publish(`${device.id}/sensor/camera/take_photo`, { type: "TAKE_PHOTO", userId: uid });
   }, [device.id, publish, uid]);
+  const onPressSnapshot = useCallback(() => setSnapshotConfirmVisible(true), []);
+  const onConfirmSnapshot = useCallback(() => {
+    initialSnapshotTimestamp.current = allLogs[0]?.createdAt ?? Timestamp.fromMillis(0);
+    setSnapshotConfirmVisible(false);
+    handleRequestSnapshot();
+    setSnapshotLoading(true);
+  }, [allLogs, handleRequestSnapshot]);
+
+  useEffect(() => {
+    const latest = allLogs[0]?.createdAt;
+    if (snapshotLoading && latest && initialSnapshotTimestamp.current && latest.toMillis() > initialSnapshotTimestamp.current.toMillis()) {
+      setSnapshotLoading(false);
+      setSnapshotSuccessVisible(true);
+    }
+  }, [allLogs, snapshotLoading]);
 
   const h = Math.floor(uptime / 3600);
   const m = Math.floor((uptime % 3600) / 60);
@@ -247,16 +264,14 @@ const SheetContent = memo(function SheetContent({
         </Animatable.View>
 
         {/* ── ACTION BUTTON ── */}
-        {canRequestSnapshot && (
-          <View className="flex-row justify-around px-4 mt-6">
-            <Pressable
-              onPress={handleRequestSnapshot}
-              className="flex-1 mx-2 bg-[#4F46E5] py-3 rounded-xl items-center shadow"
-            >
-              <Text className="font-semibold text-white">Request Snapshot</Text>
-            </Pressable>
-          </View>
-        )}
+        <View className="flex-row justify-around px-4 mt-6">
+          <Pressable
+            onPress={onPressSnapshot}
+            className="flex-1 mx-2 bg-[#4F46E5] py-3 rounded-xl items-center shadow"
+          >
+            <Text className="font-semibold text-white">Request Snapshot</Text>
+          </Pressable>
+        </View>
 
         {/* ── QUICK STATS ── */}
         <View className="flex-row justify-between px-4 mt-8">
@@ -413,6 +428,43 @@ const SheetContent = memo(function SheetContent({
           <Text className="mt-4 font-semibold">Enrollment successful!</Text>
         </View>
       </RNModal>
+
+      {/* snapshot confirm */}
+      <RNModal isVisible={snapshotConfirmVisible}>
+        <View className="p-6 bg-white rounded-lg">
+          <Pressable onPress={() => setSnapshotConfirmVisible(false)} className="mb-4">
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </Pressable>
+          <Text className="mb-4 text-lg font-semibold">Request snapshot for this device?</Text>
+          <View className="flex-row justify-end">
+            <Pressable onPress={() => setSnapshotConfirmVisible(false)} className="px-4 py-2 mr-2"><Text>Cancel</Text></Pressable>
+            <Pressable onPress={onConfirmSnapshot} className="px-4 py-2 bg-blue-600 rounded"><Text className="text-white">Yes</Text></Pressable>
+          </View>
+        </View>
+      </RNModal>
+
+      {/* snapshot loading */}
+      <RNModal isVisible={snapshotLoading}>
+        <View className="items-center p-6 bg-white rounded-lg">
+          <Pressable onPress={() => setSnapshotLoading(false)} className="self-start mb-4">
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </Pressable>
+          <ActivityIndicator size="large" color="#4F46E5" />
+          <Text className="mt-4">Waiting for snapshot…</Text>
+        </View>
+      </RNModal>
+
+      {/* snapshot success */}
+      <RNModal isVisible={snapshotSuccessVisible}>
+        <View className="items-center p-6 bg-white rounded-lg">
+          <Pressable onPress={() => setSnapshotSuccessVisible(false)} className="self-start mb-4">
+            <Ionicons name="arrow-back" size={24} color="#333" />
+          </Pressable>
+          <Ionicons name="checkmark-circle-outline" size={80} color="#10B981" />
+          <Text className="mt-4 font-semibold">Snapshot taken!</Text>
+        </View>
+      </RNModal>
+
     </>
   );
 });

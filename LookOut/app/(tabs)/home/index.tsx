@@ -30,7 +30,7 @@ export default function HomeScreen() {
   ];
 
   // ── Figure out family / personal devices ──
-  const uid = auth.currentUser!.uid;
+  const uid = auth.currentUser?.uid ?? "empty";
   const { families } = useUserFamilies(uid);
   const familyId     = families[0]?.id;
   const isMember     = useHasRole(familyId, uid, "Member");

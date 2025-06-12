@@ -16,7 +16,7 @@
 using namespace std;
 static const unsigned long OWNER_POLL_INTERVAL = 5000UL;
 static const unsigned long OWNER_RETRY_DELAY = 50UL;
-static const unsigned long OWNER_TIMEOUT = 30000UL;
+static const unsigned long OWNER_TIMEOUT = 300000UL;
 static const unsigned long WELCOME_BROADCAST_MS = 3000UL;
 static const unsigned long WELCOME_RETRY_DELAY = 500UL;
 
