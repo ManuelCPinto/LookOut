@@ -9,7 +9,7 @@
 
 ## 1. Overview
 
-LookOut is a mobile application built with Expo and React Native that connects to an ESP32-based smart doorbell system. It uses MQTT for real-time messaging, Firebase for user authentication and datanbase, and Supabase for hosting storage. Through the app you can:
+LookOut is a mobile application built with Expo and React Native that connects to an ESP32-based smart doorbell system. It uses MQTT for real-time messaging, Firebase for user authentication and database, and Supabase for hosting storage. Through the app you can:
 
 * Trigger on‑demand snapshots 
 * Enroll and verify fingerprints
